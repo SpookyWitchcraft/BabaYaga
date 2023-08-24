@@ -2,6 +2,12 @@
 open System.IO
 open System.Net.Sockets
 
+//!trivia {rounds}
+//!coinflip
+//!roll 1d6
+//!chatgpt {question}
+//!marvel {superheroname}
+
 type ChannelMessage = 
     { UserInfo: string; Channel: string; Message: string }
 
@@ -48,50 +54,65 @@ let irc_ping (writer : StreamWriter) (line:string) =
 
 let joinChannel (writer : StreamWriter) =
     let output = sprintf "JOIN %s\r\n" channel
-    irc_writer.WriteLine(output)
     writer.WriteLine(output)
 
-let irc_privmsg (writer : StreamWriter) (message : string) =
-    writer.WriteLine(sprintf "PRIVMSG %s %s\r\n" channel message)
+let irc_privmsg (input : string) (message : string) =
+    irc_writer.WriteLine(sprintf "PRIVMSG %s %s\r\n" channel message)
+    writeText <| Command input
     writeText <| Output message
-
-let (|Contains|_|) (ircResponse:string) (serverInput:string) = 
-    if serverInput.Contains(ircResponse) then
-        Some (ircResponse)
-    else
-        None
-
-let (|Commandz|_|) (command:string) (serverInput:string) =
-    if serverInput.Substring(serverInput.Substring(1).IndexOf(":") + 2).StartsWith(command) then
-        writeText <| Command serverInput
-        Some(command)
-    else
-        None
 
 let getSomeInfo (line:string) = 
     let split = line.Split(':')
     
     if split.Length < 3 then
-        None
+        Some({ UserInfo = ""; Channel = ""; Message = line})
     else
         let messageDetails = split[1].Split(' ')
         if messageDetails.Length < 4 then
             None
         else
             Some({ UserInfo = split[1]; Channel = messageDetails[2]; Message = split[2]})
-    
+
+let coinFlip () = 
+    let rand = new Random()
+    let results = rand.Next(0, 2)
+    match results with
+    | 0 -> "tails"
+    | _ -> "heads"
+  
+let getDice (message:string) = 
+    let rollInfo = message.Split('d')
+    let dice = int rollInfo[0]
+    let sides = int rollInfo[1]
+    let rand = new Random()
+    let values = List.init dice (fun _ -> rand.Next(1, sides + 1))
+    let sum = List.sum values
+    let agg = String.Join(",", values)
+    $"You rolled {agg} for a total of {sum}"
+
+let handleCommand (input:string) (message:string) = 
+    let split = message.Split(' ')
+    let command = split[0]
+
+    let out = irc_privmsg input
+
+    match command with
+    | "!coinflip" -> out <| coinFlip ()
+    | "!roll" -> out <| getDice split[1]
+    | "!trivia" -> out "not implemented, usage = !trivia {rounds}"
+    | "!chatgpt" -> out "not implemented, usage = !chatgpt {question}"
+    | "!marvel" -> out "not implemented, usage = !marvel {superhero}"
+    | _ -> out "command not found 👻"
 
 while(irc_reader.EndOfStream = false) do
     let line = irc_reader.ReadLine()
 
     let x = getSomeInfo line
 
-    //match x with
-    //| Some a -> Console.WriteLine(line)
-    //| _ -> Console.WriteLine(line)
-
-    match line with
-    | Commandz "!date" input -> irc_privmsg irc_writer (sprintf "%A" System.DateTime.Now)
-    | Contains "PING" input -> irc_ping irc_writer line
-    | Contains "+iwx" input -> joinChannel irc_writer
-    | _ -> writeText <| Input line
+    match x with
+    | Some a -> match a with
+                | y when a.Message.StartsWith("!") -> handleCommand line y.Message
+                | _ when a.Message.Contains("PING") -> irc_ping irc_writer line
+                | _ when a.Message.Contains("+iwx") -> joinChannel irc_writer
+                | _ -> writeText <| Input line
+    | _ -> Console.WriteLine(line)
