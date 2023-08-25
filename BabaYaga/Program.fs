@@ -1,6 +1,7 @@
 ﻿open System
 open System.IO
 open System.Net.Sockets
+open Infrastructure
 
 //!trivia {rounds}
 //!coinflip
@@ -15,6 +16,10 @@ type ConsoleMessage =
     | Command of string
     | Input of string
     | Output of string
+
+let emptyQuestion = { Question = ""; Category = ""; Answer = "" }
+
+let mutable currentQuestion = emptyQuestion
 
 let server = Environment.GetEnvironmentVariable("SERVER")
 let port  = int (Environment.GetEnvironmentVariable("PORT"))
@@ -90,6 +95,25 @@ let getDice (message:string) =
     let agg = String.Join(",", values)
     $"You rolled {agg} for a total of {sum}"
 
+
+let getTriviaQuestion () = 
+    let triviaQuestion = Infrastructure.getTriviaQuestion()
+    currentQuestion <- triviaQuestion
+    triviaQuestion.Question
+
+let (=?) left right = 
+    System.String.Equals(left, right, System.StringComparison.CurrentCultureIgnoreCase)
+
+let checkAnswer (message:string) = 
+    let results = currentQuestion.Answer =? message
+    
+    if results then 
+        irc_writer.WriteLine(sprintf "PRIVMSG %s %s\r\n" channel $"Correct!  The answer was {currentQuestion.Answer}.")
+
+        currentQuestion <- emptyQuestion
+    else
+        ()
+
 let handleCommand (input:string) (message:string) = 
     let split = message.Split(' ')
     let command = split[0]
@@ -99,7 +123,7 @@ let handleCommand (input:string) (message:string) =
     match command with
     | "!coinflip" -> out <| coinFlip ()
     | "!roll" -> out <| getDice split[1]
-    | "!trivia" -> out "not implemented, usage = !trivia {rounds}"
+    | "!trivia" -> out <| getTriviaQuestion()
     | "!chatgpt" -> out "not implemented, usage = !chatgpt {question}"
     | "!marvel" -> out "not implemented, usage = !marvel {superhero}"
     | _ -> out "command not found 👻"
@@ -109,8 +133,10 @@ while(irc_reader.EndOfStream = false) do
 
     let x = getSomeInfo line
 
+
     match x with
-    | Some a -> match a with
+    | Some a -> (checkAnswer a.Message)
+                match a with
                 | y when a.Message.StartsWith("!") -> handleCommand line y.Message
                 | _ when a.Message.Contains("PING") -> irc_ping irc_writer line
                 | _ when a.Message.Contains("+iwx") -> joinChannel irc_writer
