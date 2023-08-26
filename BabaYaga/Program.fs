@@ -2,6 +2,7 @@
 open System.IO
 open System.Net.Sockets
 open Infrastructure
+open System.Threading
 
 //!trivia {rounds}
 //!coinflip
@@ -17,7 +18,12 @@ type ConsoleMessage =
     | Input of string
     | Output of string
 
-let emptyQuestion = { Question = ""; Category = ""; Answer = "" }
+type QuestionStatus = 
+    | TimesUp of DateTime * TriviaQuestion
+    | NeedsHint of DateTime * TriviaQuestion
+    | HasHint of DateTime * TriviaQuestion
+
+let emptyQuestion = None
 
 let mutable currentQuestion = emptyQuestion
 
@@ -66,7 +72,7 @@ let irc_privmsg (input : string) (message : string) =
     writeText <| Command input
     writeText <| Output message
 
-let getSomeInfo (line:string) = 
+let getMessageInfo (line:string) = 
     let split = line.Split(':')
     
     if split.Length < 3 then
@@ -98,21 +104,32 @@ let getDice (message:string) =
 
 let getTriviaQuestion () = 
     let triviaQuestion = Infrastructure.getTriviaQuestion()
-    currentQuestion <- triviaQuestion
+
+    let currentTime = DateTime.UtcNow
+
+    currentQuestion <- Some <| NeedsHint (currentTime, triviaQuestion)
+
     triviaQuestion.Question
 
 let (=?) left right = 
     System.String.Equals(left, right, System.StringComparison.CurrentCultureIgnoreCase)
 
 let checkAnswer (message:string) = 
-    let results = currentQuestion.Answer =? message
-    
-    if results then 
-        irc_writer.WriteLine(sprintf "PRIVMSG %s %s\r\n" channel $"Correct!  The answer was {currentQuestion.Answer}.")
+    match currentQuestion with
+    | None -> ()
+    | Some q ->
+        match q with
+        | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) -> 
+            let results = b.Answer =? message
+ 
+            if results then 
+                let output = sprintf "PRIVMSG %s %s\r\n" channel $"Correct!  The answer was {b.Answer}."
+                irc_writer.WriteLine(output)
+                writeText <| Output output
 
-        currentQuestion <- emptyQuestion
-    else
-        ()
+                currentQuestion <- emptyQuestion
+            else
+                ()
 
 let handleCommand (input:string) (message:string) = 
     let split = message.Split(' ')
@@ -128,13 +145,59 @@ let handleCommand (input:string) (message:string) =
     | "!marvel" -> out "not implemented, usage = !marvel {superhero}"
     | _ -> out "command not found 👻"
 
+let createHint (answer:string) = 
+    let rand = new Random()
+    let values = List.init answer.Length (fun a -> 
+        let next = rand.Next(0, 7)
+        if next = 0 || not (Char.IsLetter answer[a] || Char.IsDigit answer[a]) then
+            string answer[a]
+        else
+            "*"
+        )
+    
+    let asterisks = String.concat "" values
+    let index = rand.Next(0, answer.Length)
+    let final = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
+    "Here's a hint: " + final
+
+let checkQuestionStatus () = 
+    match currentQuestion with
+    | Some a ->
+        match a with
+        | TimesUp (x, y) ->
+            currentQuestion <- emptyQuestion
+            let output = sprintf "PRIVMSG %s %s\r\n" channel $"Times up! The answer is {y.Answer}"
+            irc_writer.WriteLine(output)
+            writeText <| Output output
+        | HasHint (x, y) -> 
+            let elapsed = (DateTime.UtcNow - x).TotalSeconds
+            if elapsed >= 20 then currentQuestion <- Some <| TimesUp (x, y) else ()
+        | NeedsHint (x, y) -> 
+            let elapsed = (DateTime.UtcNow - x).TotalSeconds
+
+            if elapsed >= 10 then 
+                let output = sprintf "PRIVMSG %s %s\r\n" channel (createHint y.Answer)
+                irc_writer.WriteLine(output)
+                writeText <| Output output
+                currentQuestion <- Some <| HasHint (x, y)
+            else
+                ()
+    | _ -> ()
+
+
+let timer = new Timer(
+          TimerCallback (fun _ -> checkQuestionStatus ()),
+          null,
+          0,
+          500
+        )
+
 while(irc_reader.EndOfStream = false) do
     let line = irc_reader.ReadLine()
 
-    let x = getSomeInfo line
+    let messageInfo = getMessageInfo line
 
-
-    match x with
+    match messageInfo with
     | Some a -> (checkAnswer a.Message)
                 match a with
                 | y when a.Message.StartsWith("!") -> handleCommand line y.Message
