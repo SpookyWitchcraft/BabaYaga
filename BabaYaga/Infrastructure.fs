@@ -14,6 +14,16 @@ type TriviaQuestion =
         [<field:DataMember(Name = "category")>]
         Category: string }
 
+[<DataContract>]
+type MarvelCharacter = 
+    { 
+        [<field:DataMember(Name = "id")>]
+        Id: string
+        [<field:DataMember(Name = "name")>]
+        Name: string
+        [<field:DataMember(Name = "description")>]
+        Description: string }
+
 let client = new HttpClient()
 
 let getTriviaQuestion () = 
@@ -23,6 +33,20 @@ let getTriviaQuestion () =
         let tq = JsonConvert.DeserializeObject<TriviaQuestion>(response)
 
         return tq
+    } 
+    |> Async.AwaitTask
+    |> Async.RunSynchronously
+
+let getMarvelCharacter (characterName:string) = 
+    task {
+        let! response = client.GetStringAsync($"https://localhost:7242/api/marvel/{characterName}")
+        
+        if response = "" then
+            return { Id = ""; Name = ""; Description = "" }
+        else
+            let tq = JsonConvert.DeserializeObject<MarvelCharacter>(response)
+
+            return tq
     } 
     |> Async.AwaitTask
     |> Async.RunSynchronously

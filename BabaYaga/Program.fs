@@ -133,8 +133,12 @@ let checkAnswer (message:string) (userInfo:string) =
             else
                 ()
 
+let getMarvelCharacter (name:string) = 
+    let character = Infrastructure.getMarvelCharacter name
+    if character.Description = "" then "No description found :(" else character.Description
+
 let handleCommand (input:string) (message:string) = 
-    let split = message.Split(' ')
+    let split = message.Split(' ', 2)
     let command = split[0]
 
     let out = irc_privmsg input
@@ -144,7 +148,7 @@ let handleCommand (input:string) (message:string) =
     | "!roll" -> out <| getDice split[1]
     | "!trivia" -> out <| getTriviaQuestion()
     | "!chatgpt" -> out "not implemented, usage = !chatgpt {question}"
-    | "!marvel" -> out "not implemented, usage = !marvel {superhero}"
+    | "!marvel" -> out <| getMarvelCharacter split[1]
     | _ -> out "command not found 👻"
 
 let createHint (answer:string) = 
