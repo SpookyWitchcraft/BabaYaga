@@ -114,7 +114,7 @@ let getTriviaQuestion () =
 let (=?) left right = 
     System.String.Equals(left, right, System.StringComparison.CurrentCultureIgnoreCase)
 
-let checkAnswer (message:string) = 
+let checkAnswer (message:string) (userInfo:string) = 
     match currentQuestion with
     | None -> ()
     | Some q ->
@@ -122,8 +122,10 @@ let checkAnswer (message:string) =
         | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) -> 
             let results = b.Answer =? message
  
+            let user = (userInfo.Split(':')[0]).Split('!')[0]
+
             if results then 
-                let output = sprintf "PRIVMSG %s %s\r\n" channel $"Correct!  The answer was {b.Answer}."
+                let output = sprintf "PRIVMSG %s %s\r\n" channel $"{user} wins!  The answer is {b.Answer}."
                 irc_writer.WriteLine(output)
                 writeText <| Output output
 
@@ -148,7 +150,7 @@ let handleCommand (input:string) (message:string) =
 let createHint (answer:string) = 
     let rand = new Random()
     let values = List.init answer.Length (fun a -> 
-        let next = rand.Next(0, 7)
+        let next = rand.Next(0, 3)
         if next = 0 || not (Char.IsLetter answer[a] || Char.IsDigit answer[a]) then
             string answer[a]
         else
@@ -198,7 +200,7 @@ while(irc_reader.EndOfStream = false) do
     let messageInfo = getMessageInfo line
 
     match messageInfo with
-    | Some a -> (checkAnswer a.Message)
+    | Some a -> (checkAnswer a.Message a.UserInfo)
                 match a with
                 | y when a.Message.StartsWith("!") -> handleCommand line y.Message
                 | _ when a.Message.Contains("PING") -> irc_ping irc_writer line
