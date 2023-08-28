@@ -50,3 +50,19 @@ let getMarvelCharacter (characterName:string) =
     } 
     |> Async.AwaitTask
     |> Async.RunSynchronously
+
+let getGptAnswer (question:string) = 
+    task {
+        let! response = client.GetStringAsync($"https://localhost:7242/api/chatgpt/{question}")
+        
+        
+
+        if response = "" then
+            return ["No Good"]
+        else
+            let tq = JsonConvert.DeserializeObject<string list>(response)
+
+            return tq
+    } 
+    |> Async.AwaitTask
+    |> Async.RunSynchronously
