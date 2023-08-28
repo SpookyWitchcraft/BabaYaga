@@ -137,6 +137,10 @@ let getMarvelCharacter (name:string) =
     let character = Infrastructure.getMarvelCharacter name
     if character.Description = "" then "No description found :(" else character.Description
 
+let getGptAnswer (question:string) = 
+    let answer = Infrastructure.getGptAnswer question
+    answer
+
 let handleCommand (input:string) (message:string) = 
     let split = message.Split(' ', 2)
     let command = split[0]
@@ -147,7 +151,10 @@ let handleCommand (input:string) (message:string) =
     | "!coinflip" -> out <| coinFlip ()
     | "!roll" -> out <| getDice split[1]
     | "!trivia" -> out <| getTriviaQuestion()
-    | "!chatgpt" -> out "not implemented, usage = !chatgpt {question}"
+    | "!chatgpt" -> 
+        let answer = getGptAnswer split[1]
+        answer 
+        |> List.iter out
     | "!marvel" -> out <| getMarvelCharacter split[1]
     | _ -> out "command not found 👻"
 
