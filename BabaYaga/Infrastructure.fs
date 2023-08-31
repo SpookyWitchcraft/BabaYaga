@@ -4,9 +4,16 @@ open System.Net.Http
 open Newtonsoft.Json
 open System.Runtime.Serialization
 
+let root = ""
+
+let buildUrl (suffix:string) = 
+    $"{root}/{suffix}"
+
 [<DataContract>]
 type TriviaQuestion = 
     { 
+        [<field:DataMember(Name = "id")>]
+        Id: string
         [<field:DataMember(Name = "question")>]
         Question: string
         [<field:DataMember(Name = "answer")>]
@@ -28,7 +35,7 @@ let client = new HttpClient()
 
 let getTriviaQuestion () = 
     task {
-        let! response = client.GetStringAsync("https://localhost:7242/api/trivia")
+        let! response = client.GetStringAsync(buildUrl "/api/trivia")
         
         let tq = JsonConvert.DeserializeObject<TriviaQuestion>(response)
 
@@ -39,7 +46,7 @@ let getTriviaQuestion () =
 
 let getMarvelCharacter (characterName:string) = 
     task {
-        let! response = client.GetStringAsync($"https://localhost:7242/api/marvel/{characterName}")
+        let! response = client.GetStringAsync(buildUrl $"/api/marvel/{characterName}")
         
         if response = "" then
             return { Id = ""; Name = ""; Description = "" }
@@ -53,7 +60,7 @@ let getMarvelCharacter (characterName:string) =
 
 let getGptAnswer (question:string) = 
     task {
-        let! response = client.GetStringAsync($"https://localhost:7242/api/chatgpt/{question}")
+        let! response = client.GetStringAsync(buildUrl $"/api/chatgpt/{question}")
         
         
 
