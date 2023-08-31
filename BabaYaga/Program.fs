@@ -101,7 +101,6 @@ let getDice (message:string) =
     let agg = String.Join(",", values)
     $"You rolled {agg} for a total of {sum}"
 
-
 let getTriviaQuestion () = 
     let triviaQuestion = Infrastructure.getTriviaQuestion()
 
@@ -150,7 +149,13 @@ let handleCommand (input:string) (message:string) =
     match command with
     | "!coinflip" -> out <| coinFlip ()
     | "!roll" -> out <| getDice split[1]
-    | "!trivia" -> out <| getTriviaQuestion()
+    | "!trivia" -> 
+        match currentQuestion with
+        | None -> out <| getTriviaQuestion()
+        | Some questionStatus ->
+            match questionStatus with
+            | TimesUp _ -> out <| getTriviaQuestion()
+            | _ -> ()
     | "!chatgpt" -> 
         let answer = getGptAnswer split[1]
         answer 
@@ -170,7 +175,8 @@ let createHint (answer:string) =
     
     let asterisks = String.concat "" values
     let index = rand.Next(0, answer.Length)
-    let final = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
+    let pre = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
+    let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
     "Here's a hint: " + final
 
 let checkQuestionStatus () = 
