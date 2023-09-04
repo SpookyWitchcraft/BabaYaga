@@ -4,12 +4,6 @@ open System.Net.Sockets
 open Infrastructure
 open System.Threading
 
-//!trivia {rounds}
-//!coinflip
-//!roll 1d6
-//!chatgpt {question}
-//!marvel {superheroname}
-
 type ChannelMessage = 
     { UserInfo: string; Channel: string; Message: string }
 
@@ -56,7 +50,6 @@ let writeText (input:ConsoleMessage) =
         Console.ForegroundColor <- ConsoleColor.DarkYellow
         Console.WriteLine(message)
     
-
 let irc_ping (writer : StreamWriter) (line:string) =
     let cookie = (line.Split ':')[1]
     let output = sprintf "PONG :%s %s\r\n" cookie server
@@ -140,6 +133,18 @@ let getGptAnswer (question:string) =
     let answer = Infrastructure.getGptAnswer question
     answer
 
+let createIssue (input:string) (issue:string) =
+    let user = (input.Split('!')[0]).Split(':')[1]
+    let guid = Guid.NewGuid().ToString()
+    let now = DateTime.UtcNow.ToString("yyyy-MM-dd")
+    let title = $"{guid} - {now} - {user}"
+
+    let request = { Title = title; Body = $"{user}: {issue}"; Labels = [| "bug" |] }
+    
+    let response = Infrastructure.postGitHubIssue request
+
+    $"Thank you {user} an issue has been created.  You may check the status here, {response.HtmlUrl}."
+
 let handleCommand (input:string) (message:string) = 
     let split = message.Split(' ', 2)
     let command = split[0]
@@ -161,6 +166,7 @@ let handleCommand (input:string) (message:string) =
         answer 
         |> List.iter out
     | "!marvel" -> out <| getMarvelCharacter split[1]
+    | "!report" -> out <| createIssue input split[1]
     | _ -> out "command not found 👻"
 
 let createHint (answer:string) = 
@@ -202,7 +208,6 @@ let checkQuestionStatus () =
             else
                 ()
     | _ -> ()
-
 
 let timer = new Timer(
           TimerCallback (fun _ -> checkQuestionStatus ()),
