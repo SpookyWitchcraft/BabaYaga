@@ -6,7 +6,28 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Infrastructure.fs" />
+    <None Include=".env">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <Compile Include="Domain\Contracts\Auth0TokenResponse.fs" />
+    <Compile Include="Domain\Contracts\Auth0TokenRequest.fs" />
+    <Compile Include="Domain\Contracts\GitHubResponse.fs" />
+    <Compile Include="Domain\Contracts\ChatGpt.fs" />
+    <Compile Include="Domain\Contracts\TriviaQuestion.fs" />
+    <Compile Include="Domain\Contracts\GitHubRequest.fs" />
+    <Compile Include="Domain\Contracts\MarvelCharacter.fs" />
+    <Compile Include="Infrastructure\Modules\ClientProxy.fs" />
+    <Compile Include="Infrastructure\Requests\Auth0\Auth0Token.fs" />
+    <Compile Include="Infrastructure\Requests\Marvel\MarvelCharacterDescription.fs" />
+    <Compile Include="Infrastructure\Requests\ChatGpt\ChatGptAnswer.fs" />
+    <Compile Include="Infrastructure\Requests\Trivia\TriviaQuestion.fs" />
+    <Compile Include="Infrastructure\Requests\GitHub\GitHubIssue.fs" />
+    <Compile Include="Services\EnvironmentService.fs" />
+    <Compile Include="Services\Auth0TokenService.fs" />
+    <Compile Include="Services\ChatGptAnswerService.fs" />
+    <Compile Include="Services\GitHubIssueService.fs" />
+    <Compile Include="Services\MarvelCharacterService.fs" />
+    <Compile Include="Services\TriviaQuestionService.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
