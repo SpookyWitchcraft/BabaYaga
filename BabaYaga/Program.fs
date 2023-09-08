@@ -1,8 +1,16 @@
 ﻿open System
 open System.IO
 open System.Net.Sockets
-open Infrastructure
 open System.Threading
+open Domain.Contracts.TriviaQuestion
+open Domain.Contracts.GitHubRequest
+open Domain.Contracts.GitHubResponse
+open Domain.Contracts.MarvelCharacter
+open Infrastructure.Requests.Marvel
+open Infrastructure.Requests.ChatGpt
+open Infrastructure.Requests.GitHub
+open Infrastructure.Requests.Trivia
+open EnvironmentService
 
 type ChannelMessage = 
     { UserInfo: string; Channel: string; Message: string }
@@ -21,10 +29,10 @@ let emptyQuestion = None
 
 let mutable currentQuestion = emptyQuestion
 
-let server = Environment.GetEnvironmentVariable("SERVER")
-let port  = int (Environment.GetEnvironmentVariable("PORT"))
-let channel = Environment.GetEnvironmentVariable("CHANNEL")
-let nick = Environment.GetEnvironmentVariable("NICK")
+let server = getEnvironmentVariables["SERVER"]
+let port  = int (getEnvironmentVariables["PORT"])
+let channel = getEnvironmentVariables["CHANNEL"]
+let nick = getEnvironmentVariables["NICK"]
 
 Console.ForegroundColor <- ConsoleColor.DarkRed
 
@@ -95,13 +103,18 @@ let getDice (message:string) =
     $"You rolled {agg} for a total of {sum}"
 
 let getTriviaQuestion () = 
-    let triviaQuestion = Infrastructure.getTriviaQuestion()
+    let au = getEnvironmentVariables["AUTH_URL"]
+    let cid = getEnvironmentVariables["CLIENT_ID"]
+    let cs = getEnvironmentVariables["CLIENT_SECRET"]
+    let aud = getEnvironmentVariables["AUDIENCE"]
+
+    let triviaQuestion = TriviaQuestion.get au cid cs aud
 
     let currentTime = DateTime.UtcNow
 
     currentQuestion <- Some <| NeedsHint (currentTime, triviaQuestion)
 
-    triviaQuestion.Question
+    $"{triviaQuestion.Id} - {triviaQuestion.Question}"
 
 let (=?) left right = 
     System.String.Equals(left, right, System.StringComparison.CurrentCultureIgnoreCase)
@@ -126,11 +139,16 @@ let checkAnswer (message:string) (userInfo:string) =
                 ()
 
 let getMarvelCharacter (name:string) = 
-    let character = Infrastructure.getMarvelCharacter name
+    let au = getEnvironmentVariables["AUTH_URL"]
+    let cid = getEnvironmentVariables["CLIENT_ID"]
+    let cs = getEnvironmentVariables["CLIENT_SECRET"]
+    let aud = getEnvironmentVariables["AUDIENCE"]
+
+    let character = MarvelCharacterDescription.get name au cid cs aud
     if character.Description = "" then "No description found :(" else character.Description
 
 let getGptAnswer (question:string) = 
-    let answer = Infrastructure.getGptAnswer question
+    let answer = ChatGptAnswer.get question
     answer
 
 let createIssue (input:string) (issue:string) =
@@ -141,7 +159,7 @@ let createIssue (input:string) (issue:string) =
 
     let request = { Title = title; Body = $"{user}: {issue}"; Labels = [| "bug" |] }
     
-    let response = Infrastructure.postGitHubIssue request
+    let response = GitHubIssue.post request
 
     $"Thank you {user} an issue has been created.  You may check the status here, {response.HtmlUrl}."
 
@@ -162,7 +180,11 @@ let handleCommand (input:string) (message:string) =
             | TimesUp _ -> out <| getTriviaQuestion()
             | _ -> ()
     | "!chatgpt" -> 
-        let answer = getGptAnswer split[1]
+        let au = getEnvironmentVariables["AUTH_URL"]
+        let cid = getEnvironmentVariables["CLIENT_ID"]
+        let cs = getEnvironmentVariables["CLIENT_SECRET"]
+        let aud = getEnvironmentVariables["AUDIENCE"]
+        let answer = getGptAnswer split[1] au cid cs aud
         answer 
         |> List.iter out
     | "!marvel" -> out <| getMarvelCharacter split[1]
