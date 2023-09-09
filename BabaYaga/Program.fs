@@ -130,7 +130,7 @@ let checkAnswer (message:string) (userInfo:string) =
             let user = (userInfo.Split(':')[0]).Split('!')[0]
 
             if results then 
-                let output = sprintf "PRIVMSG %s %s\r\n" channel $"{user} wins!  The answer is {b.Answer}."
+                let output = sprintf "PRIVMSG %s %s" channel $"{user} wins!  The answer is {b.Answer}."
                 irc_writer.WriteLine(output)
                 writeText <| Output output
 
@@ -213,7 +213,7 @@ let checkQuestionStatus () =
         match a with
         | TimesUp (x, y) ->
             currentQuestion <- emptyQuestion
-            let output = sprintf "PRIVMSG %s %s\r\n" channel $"Times up! The answer is {y.Answer}"
+            let output = sprintf "PRIVMSG %s %s" channel $"Times up! The answer is {y.Answer}"
             irc_writer.WriteLine(output)
             writeText <| Output output
         | HasHint (x, y) -> 
@@ -223,7 +223,7 @@ let checkQuestionStatus () =
             let elapsed = (DateTime.UtcNow - x).TotalSeconds
 
             if elapsed >= 10 then 
-                let output = sprintf "PRIVMSG %s %s\r\n" channel (createHint y.Answer)
+                let output = sprintf "PRIVMSG %s %s" channel (createHint y.Answer)
                 irc_writer.WriteLine(output)
                 writeText <| Output output
                 currentQuestion <- Some <| HasHint (x, y)
