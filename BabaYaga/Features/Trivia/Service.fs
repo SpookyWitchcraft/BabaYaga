@@ -128,7 +128,7 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
                 let winner = findWinner &state
                 let winnerOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
                 state.writer.WriteLine(winnerOutput)
-                state <- { state with question = None }
+                state <- { state with question = None; scores = new Dictionary<string, int>() }
             //writeText <| Output output
         | HasHint (x, y) -> 
             let elapsed = (Stopwatch.GetTimestamp() - x) / Stopwatch.Frequency
