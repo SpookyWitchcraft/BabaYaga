@@ -1,16 +1,11 @@
 ﻿open System
 open System.IO
 open System.Net.Sockets
+open Modules.Environment
+open Application.Types
+open Trivia.Types
 open System.Threading
-open Domain.Contracts.TriviaQuestion
-open Domain.Contracts.GitHubRequest
-open Domain.Contracts.GitHubResponse
-open Domain.Contracts.MarvelCharacter
-open Infrastructure.Requests.Marvel
-open Infrastructure.Requests.ChatGpt
-open Infrastructure.Requests.GitHub
-open Infrastructure.Requests.Trivia
-open EnvironmentService
+open System.Collections.Generic
 
 type ChannelMessage = 
     { UserInfo: string; Channel: string; Message: string }
@@ -20,31 +15,33 @@ type ConsoleMessage =
     | Input of string
     | Output of string
 
-type QuestionStatus = 
-    | TimesUp of DateTime * TriviaQuestion
-    | NeedsHint of DateTime * TriviaQuestion
-    | HasHint of DateTime * TriviaQuestion
-
-let emptyQuestion = None
-
-let mutable currentQuestion = emptyQuestion
-
 let server = getEnvironmentVariables["SERVER"]
 let port  = int (getEnvironmentVariables["PORT"])
 let channel = getEnvironmentVariables["CHANNEL"]
 let nick = getEnvironmentVariables["NICK"]
 
+let initialState = 
+    let irc_client = new TcpClient();
+    irc_client.Connect(server, port)
+
+    let irc_reader = new StreamReader(irc_client.GetStream())
+    let irc_writer = new StreamWriter(irc_client.GetStream())
+    irc_writer.AutoFlush <- true
+    { 
+        client = irc_client
+        reader = irc_reader
+        writer = irc_writer
+        question = None
+        rounds = 0
+        scores = new Dictionary<string, int>()
+    }
+
+let mutable state = initialState
+
 Console.ForegroundColor <- ConsoleColor.DarkRed
 
-let irc_client = new TcpClient();
-irc_client.Connect(server, port)
-
-let irc_reader = new StreamReader(irc_client.GetStream())
-let irc_writer = new StreamWriter(irc_client.GetStream())
-irc_writer.AutoFlush <- true
-
-irc_writer.WriteLine(sprintf "NICK %s\r\n" nick)
-irc_writer.WriteLine(sprintf "USER %s %s %s %s\r\n" nick nick nick nick)
+state.writer.WriteLine(sprintf "NICK %s\r\n" nick)
+state.writer.WriteLine(sprintf "USER %s %s %s %s\r\n" nick nick nick nick)
 
 let writeText (input:ConsoleMessage) = 
     match input with
@@ -69,7 +66,7 @@ let joinChannel (writer : StreamWriter) =
     writer.WriteLine(output)
 
 let irc_privmsg (input : string) (message : string) =
-    irc_writer.WriteLine(sprintf "PRIVMSG %s %s\r\n" channel message)
+    state.writer.WriteLine(sprintf "PRIVMSG %s %s\r\n" channel message)
     writeText <| Command input
     writeText <| Output message
 
@@ -85,83 +82,14 @@ let getMessageInfo (line:string) =
         else
             Some({ UserInfo = split[1]; Channel = messageDetails[2]; Message = split[2]})
 
-let coinFlip () = 
-    let rand = new Random()
-    let results = rand.Next(0, 2)
-    match results with
-    | 0 -> "tails"
-    | _ -> "heads"
-  
-let getDice (message:string) = 
-    let rollInfo = message.Split('d')
-    let dice = int rollInfo[0]
-    let sides = int rollInfo[1]
-    let rand = new Random()
-    let values = List.init dice (fun _ -> rand.Next(1, sides + 1))
-    let sum = List.sum values
-    let agg = String.Join(",", values)
-    $"You rolled {agg} for a total of {sum}"
+let handleTriviaCommand (input:string) (triviaRounds:string) = 
+    let out = irc_privmsg input
 
-let getTriviaQuestion () = 
-    let au = getEnvironmentVariables["AUTH_URL"]
-    let cid = getEnvironmentVariables["CLIENT_ID"]
-    let cs = getEnvironmentVariables["CLIENT_SECRET"]
-    let aud = getEnvironmentVariables["AUDIENCE"]
-
-    let triviaQuestion = TriviaQuestion.get au cid cs aud
-
-    let currentTime = DateTime.UtcNow
-
-    currentQuestion <- Some <| NeedsHint (currentTime, triviaQuestion)
-
-    $"{triviaQuestion.Id} - {triviaQuestion.Question}"
-
-let (=?) left right = 
-    System.String.Equals(left, right, System.StringComparison.CurrentCultureIgnoreCase)
-
-let checkAnswer (message:string) (userInfo:string) = 
-    match currentQuestion with
-    | None -> ()
-    | Some q ->
-        match q with
-        | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) -> 
-            let results = b.Answer =? message
- 
-            let user = (userInfo.Split(':')[0]).Split('!')[0]
-
-            if results then 
-                let output = sprintf "PRIVMSG %s %s" channel $"{user} wins!  The answer is {b.Answer}."
-                irc_writer.WriteLine(output)
-                writeText <| Output output
-
-                currentQuestion <- emptyQuestion
-            else
-                ()
-
-let getMarvelCharacter (name:string) = 
-    let au = getEnvironmentVariables["AUTH_URL"]
-    let cid = getEnvironmentVariables["CLIENT_ID"]
-    let cs = getEnvironmentVariables["CLIENT_SECRET"]
-    let aud = getEnvironmentVariables["AUDIENCE"]
-
-    let character = MarvelCharacterDescription.get name au cid cs aud
-    if character.Description = "" then "No description found :(" else character.Description
-
-let getGptAnswer (question:string) = 
-    let answer = ChatGptAnswer.get question
-    answer
-
-let createIssue (input:string) (issue:string) =
-    let user = (input.Split('!')[0]).Split(':')[1]
-    let guid = Guid.NewGuid().ToString()
-    let now = DateTime.UtcNow.ToString("yyyy-MM-dd")
-    let title = $"{guid} - {now} - {user}"
-
-    let request = { Title = title; Body = $"{user}: {issue}"; Labels = [| "bug" |] }
-    
-    let response = GitHubIssue.post request
-
-    $"Thank you {user} an issue has been created.  You may check the status here, {response.HtmlUrl}."
+    match state.question with
+        | None -> 
+            state <- { state with question = Trivia.Service.getTriviaQuestion(); rounds = int triviaRounds }
+            out <| Trivia.Service.questionOutput state.question
+        | _ -> ()
 
 let handleCommand (input:string) (message:string) = 
     let split = message.Split(' ', 2)
@@ -170,84 +98,39 @@ let handleCommand (input:string) (message:string) =
     let out = irc_privmsg input
 
     match command with
-    | "!coinflip" -> out <| coinFlip ()
-    | "!roll" -> out <| getDice split[1]
+    | "!coinflip" -> out <| CoinFlip.Service.flip ()
+    | "!roll" -> out <| Roll.Service.getDice split[1]
     | "!trivia" -> 
-        match currentQuestion with
-        | None -> out <| getTriviaQuestion()
-        | Some questionStatus ->
-            match questionStatus with
-            | TimesUp _ -> out <| getTriviaQuestion()
-            | _ -> ()
+        let l = split.Length
+        if l = 2 then
+            handleTriviaCommand input split[1]
+        else
+            handleTriviaCommand input "0"
     | "!chatgpt" -> 
-        let au = getEnvironmentVariables["AUTH_URL"]
-        let cid = getEnvironmentVariables["CLIENT_ID"]
-        let cs = getEnvironmentVariables["CLIENT_SECRET"]
-        let aud = getEnvironmentVariables["AUDIENCE"]
-        let answer = getGptAnswer split[1] au cid cs aud
+        let answer = ChatGpt.Service.getGptAnswer split[1]
         answer 
         |> List.iter out
-    | "!marvel" -> out <| getMarvelCharacter split[1]
-    | "!report" -> out <| createIssue input split[1]
+    | "!marvel" -> out <| Marvel.Service.getMarvelCharacter split[1]
+    | "!report" -> out <| GitHub.Service.createIssue input split[1]
     | _ -> out "command not found 👻"
 
-let createHint (answer:string) = 
-    let rand = new Random()
-    let values = List.init answer.Length (fun a -> 
-        let next = rand.Next(0, 3)
-        if next = 0 || not (Char.IsLetter answer[a] || Char.IsDigit answer[a]) then
-            string answer[a]
-        else
-            "*"
-        )
-    
-    let asterisks = String.concat "" values
-    let index = rand.Next(0, answer.Length)
-    let pre = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
-    let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
-    "Here's a hint: " + final
-
-let checkQuestionStatus () = 
-    match currentQuestion with
-    | Some a ->
-        match a with
-        | TimesUp (x, y) ->
-            currentQuestion <- emptyQuestion
-            let output = sprintf "PRIVMSG %s %s" channel $"Times up! The answer is {y.Answer}"
-            irc_writer.WriteLine(output)
-            writeText <| Output output
-        | HasHint (x, y) -> 
-            let elapsed = (DateTime.UtcNow - x).TotalSeconds
-            if elapsed >= 20 then currentQuestion <- Some <| TimesUp (x, y) else ()
-        | NeedsHint (x, y) -> 
-            let elapsed = (DateTime.UtcNow - x).TotalSeconds
-
-            if elapsed >= 10 then 
-                let output = sprintf "PRIVMSG %s %s" channel (createHint y.Answer)
-                irc_writer.WriteLine(output)
-                writeText <| Output output
-                currentQuestion <- Some <| HasHint (x, y)
-            else
-                ()
-    | _ -> ()
-
 let timer = new Timer(
-          TimerCallback (fun _ -> checkQuestionStatus ()),
-          null,
+          TimerCallback (fun _ -> Trivia.Service.checkQuestionStatus(&state)),
+          state,
           0,
           500
         )
 
-while(irc_reader.EndOfStream = false) do
-    let line = irc_reader.ReadLine()
+while(state.reader.EndOfStream = false) do
+    let line = state.reader.ReadLine()
 
     let messageInfo = getMessageInfo line
 
     match messageInfo with
-    | Some a -> (checkAnswer a.Message a.UserInfo)
+    | Some a -> (Trivia.Service.checkAnswer &state a.Message a.UserInfo)
                 match a with
                 | y when a.Message.StartsWith("!") -> handleCommand line y.Message
-                | _ when a.Message.Contains("PING") -> irc_ping irc_writer line
-                | _ when a.Message.Contains("+iwx") -> joinChannel irc_writer
+                | _ when a.Message.Contains("PING") -> irc_ping state.writer line
+                | _ when a.Message.Contains("+iwx") -> joinChannel state.writer
                 | _ -> writeText <| Input line
     | _ -> Console.WriteLine(line)
