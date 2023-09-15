@@ -5,6 +5,7 @@ open Modules.Environment
 open Application.Types
 open Trivia.Types
 open System.Threading
+open System.Collections.Generic
 
 type ChannelMessage = 
     { UserInfo: string; Channel: string; Message: string }
@@ -14,9 +15,12 @@ type ConsoleMessage =
     | Input of string
     | Output of string
 
+let server = getEnvironmentVariables["SERVER"]
+let port  = int (getEnvironmentVariables["PORT"])
+let channel = getEnvironmentVariables["CHANNEL"]
+let nick = getEnvironmentVariables["NICK"]
+
 let initialState = 
-    let server = getEnvironmentVariables["SERVER"]
-    let port  = int (getEnvironmentVariables["PORT"])
     let irc_client = new TcpClient();
     irc_client.Connect(server, port)
 
@@ -28,18 +32,13 @@ let initialState =
         reader = irc_reader
         writer = irc_writer
         question = None
+        rounds = 0
+        scores = new Dictionary<string, int>()
     }
 
 let mutable state = initialState
 
-let server = getEnvironmentVariables["SERVER"]
-let port  = int (getEnvironmentVariables["PORT"])
-let channel = getEnvironmentVariables["CHANNEL"]
-let nick = getEnvironmentVariables["NICK"]
-
 Console.ForegroundColor <- ConsoleColor.DarkRed
-
-
 
 state.writer.WriteLine(sprintf "NICK %s\r\n" nick)
 state.writer.WriteLine(sprintf "USER %s %s %s %s\r\n" nick nick nick nick)
@@ -83,6 +82,15 @@ let getMessageInfo (line:string) =
         else
             Some({ UserInfo = split[1]; Channel = messageDetails[2]; Message = split[2]})
 
+let handleTriviaCommand (input:string) (triviaRounds:string) = 
+    let out = irc_privmsg input
+
+    match state.question with
+        | None -> 
+            state <- { state with question = Trivia.Service.getTriviaQuestion(); rounds = int triviaRounds }
+            out <| Trivia.Service.questionOutput state.question
+        | _ -> ()
+
 let handleCommand (input:string) (message:string) = 
     let split = message.Split(' ', 2)
     let command = split[0]
@@ -93,16 +101,11 @@ let handleCommand (input:string) (message:string) =
     | "!coinflip" -> out <| CoinFlip.Service.flip ()
     | "!roll" -> out <| Roll.Service.getDice split[1]
     | "!trivia" -> 
-        match state.question with
-        | None -> 
-            state <- { state with question = Trivia.Service.getTriviaQuestion() }
-            out <| Trivia.Service.questionOutput state.question
-        | Some questionStatus ->
-            match questionStatus with
-            | TimesUp _ -> 
-                state <- { state with question = Trivia.Service.getTriviaQuestion() }
-                out <| Trivia.Service.questionOutput state.question
-            | _ -> ()
+        let l = split.Length
+        if l = 2 then
+            handleTriviaCommand input split[1]
+        else
+            handleTriviaCommand input "0"
     | "!chatgpt" -> 
         let answer = ChatGpt.Service.getGptAnswer split[1]
         answer 

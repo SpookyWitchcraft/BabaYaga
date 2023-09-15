@@ -9,6 +9,8 @@ open Newtonsoft.Json
 open System.Net.Http.Headers
 open System.Diagnostics
 open System
+open System.Collections.Generic
+open System.Linq
 
 let get () = 
     async {
@@ -32,6 +34,32 @@ let getTriviaQuestion () =
 
     Some <| NeedsHint (currentTime, triviaQuestion)
 
+let questionOutput (questionStatus:QuestionStatus option) = 
+    match questionStatus with
+    | Some a -> 
+        match a with | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) ->
+            $"[{b.Id}]: {b.Question}"
+    | _ -> "Oops there was a problem ☀"
+
+let updateScores (state:byref<ApplicationState>) (winner:string) = 
+    if state.scores.ContainsKey winner then
+        state.scores[winner] <- state.scores[winner] + 1
+    else
+        state.scores.Add(winner, 1)
+
+let findWinner (state:byref<ApplicationState>) = 
+    if state.scores.Count < 1 then
+        "The round is now over!  No one scored!"
+    else
+        let best = int <| state.scores.Values.Max()
+        let winners = 
+            state.scores
+            |> Seq.filter (fun kvp -> kvp.Value = best)
+            |> Seq.map (fun kvp -> kvp.Key)
+            |> Seq.toArray
+            |> String.concat ", "
+        $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
+
 let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:string) = 
     match state.question with
     | None -> ()
@@ -45,9 +73,22 @@ let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:strin
             if results then 
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"{user} wins!  The answer is {b.Answer}."
                 state.writer.WriteLine(output)
-                //writeText <| Output output
+                
+                updateScores &state user
 
-                state <- { state with question = None }
+                let roundsLeft = state.rounds - 1
+                if roundsLeft > 0 then
+                    let q = getTriviaQuestion()
+                    let m = questionOutput q
+                    let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
+                    state.writer.WriteLine(output)
+                    state <- { state with question = q; rounds = roundsLeft }
+                    //writeText <| Output output
+                else
+                    let winner = findWinner &state
+                    let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
+                    state.writer.WriteLine(output)
+                    state <- { state with question = None; scores = new Dictionary<string, int>() }
             else
                 ()
 
@@ -71,10 +112,23 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
     match state.question with
     | Some a ->
         match a with
-        | TimesUp (x, y) ->
-            state <- { state with question = None }
-            let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-            state.writer.WriteLine(output)
+        | TimesUp (_, y) ->
+            let roundsLeft = state.rounds - 1
+            if roundsLeft > 0 then
+                let tuOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
+                state.writer.WriteLine(tuOutput)
+                let q = getTriviaQuestion()
+                let m = questionOutput q
+                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
+                state.writer.WriteLine(output)
+                state <- { state with question = q; rounds = roundsLeft }
+            else
+                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
+                state.writer.WriteLine(output)
+                let winner = findWinner &state
+                let winnerOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
+                state.writer.WriteLine(winnerOutput)
+                state <- { state with question = None }
             //writeText <| Output output
         | HasHint (x, y) -> 
             let elapsed = (Stopwatch.GetTimestamp() - x) / Stopwatch.Frequency
@@ -94,9 +148,3 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
                 ()
     | _ -> ()
 
-let questionOutput (questionStatus:QuestionStatus option) = 
-    match questionStatus with
-    | Some a -> 
-        match a with | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) ->
-            $"[{b.Id}]: {b.Question}"
-    | _ -> "Oops there was a problem ☀"
