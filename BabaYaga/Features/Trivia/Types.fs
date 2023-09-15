@@ -1,4 +1,4 @@
-﻿module Domain.Contracts.TriviaQuestion
+﻿module Trivia.Types
 
 open System.Runtime.Serialization
 
@@ -13,3 +13,8 @@ type TriviaQuestion =
         Answer: string
         [<field:DataMember(Name = "category")>]
         Category: string }
+
+type QuestionStatus = 
+    | TimesUp of int64 * TriviaQuestion
+    | NeedsHint of int64 * TriviaQuestion
+    | HasHint of int64 * TriviaQuestion

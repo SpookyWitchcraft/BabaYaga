@@ -1,4 +1,4 @@
-﻿module Domain.Contracts.MarvelCharacter
+﻿module Marvel.Types
 
 open System.Runtime.Serialization
 
