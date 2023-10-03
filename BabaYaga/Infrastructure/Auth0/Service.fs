@@ -31,7 +31,7 @@ let mutable authResponse = ({ AccessToken = ""; ExpiresIn = 86400; TokenType = "
 let buildRequest(id:string) (secret:string) (audience:string) =
   { GrantType = "client_credentials"; ClientId = id; ClientSecret = secret; Audience = audience }
 
-let getNewAuthToken = 
+let getNewAuthToken () = 
     let au = getEnvironmentVariables["AUTH_URL"]
     let cid = getEnvironmentVariables["CLIENT_ID"]
     let cs = getEnvironmentVariables["CLIENT_SECRET"]
@@ -43,13 +43,13 @@ let getNewAuthToken =
 let expired (response:Auth0TokenResponse * int64) = 
     let (a, b) = response
     let now = Stopwatch.GetTimestamp()
-    let seconds = now - b
+    let seconds = (now - b) / Stopwatch.Frequency
     a.AccessToken = "" || a.ExpiresIn <= int seconds
 
 let getToken () = 
     match authResponse with
     | ar when expired ar ->
-        let (a, b) = getNewAuthToken
+        let (a, b) = getNewAuthToken()
         authResponse <- (a, b)
         a.AccessToken
     | (a, _) -> a.AccessToken
