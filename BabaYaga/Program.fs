@@ -3,7 +3,6 @@ open System.IO
 open System.Net.Sockets
 open Modules.Environment
 open Application.Types
-open Trivia.Types
 open System.Threading
 open System.Collections.Generic
 
@@ -19,6 +18,7 @@ let server = getEnvironmentVariables["SERVER"]
 let port  = int (getEnvironmentVariables["PORT"])
 let channel = getEnvironmentVariables["CHANNEL"]
 let nick = getEnvironmentVariables["NICK"]
+let password = getEnvironmentVariables["PASSWORD"]
 
 let initialState = 
     let irc_client = new TcpClient();
@@ -59,6 +59,10 @@ let irc_ping (writer : StreamWriter) (line:string) =
     let cookie = (line.Split ':')[1]
     let output = sprintf "PONG :%s %s\r\n" cookie server
 
+    writer.WriteLine(output)
+
+let identify (writer : StreamWriter) =
+    let output = sprintf "nickserv identify %s\r\n" password
     writer.WriteLine(output)
 
 let joinChannel (writer : StreamWriter) =
@@ -131,6 +135,8 @@ while(state.reader.EndOfStream = false) do
                 match a with
                 | y when a.Message.StartsWith("!") -> handleCommand line y.Message
                 | _ when a.Message.Contains("PING") -> irc_ping state.writer line
-                | _ when a.Message.Contains("+iwx") -> joinChannel state.writer
+                | _ when a.Message.Contains("+iwx") -> 
+                    identify state.writer
+                    joinChannel state.writer
                 | _ -> writeText <| Input line
     | _ -> Console.WriteLine(line)
