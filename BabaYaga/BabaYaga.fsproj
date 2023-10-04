@@ -9,6 +9,7 @@
     <None Include=".env">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Compile Include="Modules\ConsoleWriter.fs" />
     <Compile Include="Modules\Environment.fs" />
     <Compile Include="Infrastructure\ClientProxy.fs" />
     <Compile Include="Infrastructure\Auth0\Types.fs" />

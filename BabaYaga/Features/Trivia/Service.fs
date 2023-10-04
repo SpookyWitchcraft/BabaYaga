@@ -11,6 +11,7 @@ open System.Diagnostics
 open System
 open System.Collections.Generic
 open System.Linq
+open Modules.ConsoleWriter
 
 let get () = 
     async {
@@ -73,7 +74,7 @@ let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:strin
             if results then 
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"{user} wins!  The answer is {b.Answer}."
                 state.writer.WriteLine(output)
-                
+                writeText <| Output output
                 updateScores &state user
 
                 let roundsLeft = state.rounds - 1
@@ -83,12 +84,13 @@ let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:strin
                     let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
                     state.writer.WriteLine(output)
                     state <- { state with question = q; rounds = roundsLeft }
-                    //writeText <| Output output
+                    writeText <| Output output
                 else
                     let winner = findWinner &state
                     let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
                     state.writer.WriteLine(output)
                     state <- { state with question = None; scores = new Dictionary<string, int>() }
+                    writeText <| Output output
             else
                 ()
 
@@ -122,6 +124,7 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
                 state.writer.WriteLine(output)
                 state <- { state with question = q; rounds = roundsLeft }
+                writeText <| Output tuOutput
             else
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
                 state.writer.WriteLine(output)
@@ -129,7 +132,7 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
                 let winnerOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
                 state.writer.WriteLine(winnerOutput)
                 state <- { state with question = None; scores = new Dictionary<string, int>() }
-            //writeText <| Output output
+                writeText <| Output output
         | HasHint (x, y) -> 
             let elapsed = (Stopwatch.GetTimestamp() - x) / Stopwatch.Frequency
             if elapsed >= 20 then 
@@ -142,7 +145,7 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
             if elapsed >= 10 then 
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] (createHint y.Answer)
                 state.writer.WriteLine(output)
-                //writeText <| Output output
+                writeText <| Output output
                 state <- { state with question = Some <| HasHint (x, y) }
             else
                 ()
