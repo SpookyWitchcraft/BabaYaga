@@ -2,17 +2,13 @@
 open System.IO
 open System.Net.Sockets
 open Modules.Environment
+open Modules.ConsoleWriter
 open Application.Types
 open System.Threading
 open System.Collections.Generic
 
 type ChannelMessage = 
     { UserInfo: string; Channel: string; Message: string }
-
-type ConsoleMessage = 
-    | Command of string
-    | Input of string
-    | Output of string
 
 let server = getEnvironmentVariables["SERVER"]
 let port  = int (getEnvironmentVariables["PORT"])
@@ -42,18 +38,6 @@ Console.ForegroundColor <- ConsoleColor.DarkRed
 
 state.writer.WriteLine(sprintf "NICK %s\r\n" nick)
 state.writer.WriteLine(sprintf "USER %s %s %s %s\r\n" nick nick nick nick)
-
-let writeText (input:ConsoleMessage) = 
-    match input with
-    | Command message -> 
-        Console.ForegroundColor <- ConsoleColor.Red
-        Console.WriteLine(message)
-    | Input message -> 
-        Console.ForegroundColor <- ConsoleColor.DarkRed
-        Console.WriteLine(message)
-    | Output message -> 
-        Console.ForegroundColor <- ConsoleColor.DarkYellow
-        Console.WriteLine(message)
     
 let irc_ping (writer : StreamWriter) (line:string) =
     let cookie = (line.Split ':')[1]
