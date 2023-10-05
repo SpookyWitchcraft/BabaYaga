@@ -37,7 +37,7 @@ let mutable state = initialState
 Console.ForegroundColor <- ConsoleColor.DarkRed
 
 state.writer.WriteLine(sprintf "NICK %s\r\n" nick)
-state.writer.WriteLine(sprintf "USER %s %s %s %s\r\n" nick nick nick nick)
+state.writer.WriteLine(sprintf "USER %s 0 * %s\r\n" nick nick)
     
 let irc_ping (writer : StreamWriter) (line:string) =
     let cookie = (line.Split ':')[1]
