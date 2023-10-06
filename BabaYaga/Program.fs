@@ -109,6 +109,10 @@ let timer = new Timer(
           500
         )
 
+let identifyAndJoin () = 
+    identify state.writer
+    joinChannel state.writer
+
 while(state.reader.EndOfStream = false) do
     let line = state.reader.ReadLine()
 
@@ -119,8 +123,6 @@ while(state.reader.EndOfStream = false) do
                 match a with
                 | y when a.Message.StartsWith("!") -> handleCommand line y.Message
                 | _ when a.Message.Contains("PING") -> irc_ping state.writer line
-                | _ when a.Message.Contains("+iwx") -> 
-                    identify state.writer
-                    joinChannel state.writer
+                | _ when a.Message.Contains("+iwx") -> identifyAndJoin ()
                 | _ -> writeText <| Input line
     | _ -> Console.WriteLine(line)
