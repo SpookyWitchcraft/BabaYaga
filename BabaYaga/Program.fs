@@ -41,17 +41,21 @@ state.writer.WriteLine(sprintf "USER %s 0 * %s\r\n" nick nick)
     
 let irc_ping (writer : StreamWriter) (line:string) =
     let cookie = (line.Split ':')[1]
-    let output = sprintf "PONG :%s %s\r\n" cookie server
+    let output = sprintf "PONG :%s %s" cookie server
+    writeText <| Input line
+    writeText <| Output output
+    writer.WriteLine(output + "\r\n")
 
-    writer.WriteLine(output)
-
-let identify (writer : StreamWriter) =
+let identify (writer : StreamWriter) (line:string) =
     let output = sprintf "nickserv identify %s\r\n" password
+    writeText <| Input line
     writer.WriteLine(output)
 
-let joinChannel (writer : StreamWriter) =
-    let output = sprintf "JOIN %s\r\n" channel
-    writer.WriteLine(output)
+let joinChannel (writer : StreamWriter) (line:string) =
+    let output = sprintf "JOIN %s" channel
+    writeText <| Input line
+    writeText <| Output output
+    writer.WriteLine(output + "\r\n")
 
 let irc_privmsg (input : string) (message : string) =
     state.writer.WriteLine(sprintf "PRIVMSG %s %s\r\n" channel message)
@@ -109,9 +113,9 @@ let timer = new Timer(
           500
         )
 
-let identifyAndJoin () = 
-    identify state.writer
-    joinChannel state.writer
+let identifyAndJoin (line:string) = 
+    identify state.writer line
+    joinChannel state.writer line
 
 while(state.reader.EndOfStream = false) do
     let line = state.reader.ReadLine()
@@ -123,6 +127,6 @@ while(state.reader.EndOfStream = false) do
                 match a with
                 | y when a.Message.StartsWith("!") -> handleCommand line y.Message
                 | _ when a.Message.Contains("PING") -> irc_ping state.writer line
-                | _ when a.Message.Contains("+iwx") -> identifyAndJoin ()
+                | _ when a.Message.Contains("+iwx") -> identifyAndJoin line
                 | _ -> writeText <| Input line
     | _ -> Console.WriteLine(line)

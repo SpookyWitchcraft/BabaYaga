@@ -50,7 +50,9 @@ let updateScores (state:byref<ApplicationState>) (winner:string) =
 
 let findWinner (state:byref<ApplicationState>) = 
     if state.scores.Count < 1 then
-        "The round is now over!  No one scored!"
+        let output = "The round is now over!  No one scored!"
+        writeText <| Output output
+        output
     else
         let best = int <| state.scores.Values.Max()
         let winners = 
@@ -59,7 +61,9 @@ let findWinner (state:byref<ApplicationState>) =
             |> Seq.map (fun kvp -> kvp.Key)
             |> Seq.toArray
             |> String.concat ", "
-        $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
+        let output = $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
+        writeText <| Output output
+        output
 
 let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:string) = 
     match state.question with
