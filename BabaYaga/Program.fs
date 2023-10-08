@@ -117,6 +117,12 @@ let identifyAndJoin (line:string) =
     identify state.writer line
     joinChannel state.writer line
 
+//clean up initial irc commands
+//set app to 'identified'
+//split state by module
+//reuse http stuff
+//handle http codes better
+//handle timers better
 while(state.reader.EndOfStream = false) do
     let line = state.reader.ReadLine()
 
