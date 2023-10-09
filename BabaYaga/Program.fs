@@ -30,6 +30,7 @@ let initialState =
         question = None
         rounds = 0
         scores = new Dictionary<string, int>()
+        botState = Unidentified
     }
 
 let mutable state = initialState
@@ -133,6 +134,6 @@ while(state.reader.EndOfStream = false) do
                 match a with
                 | y when a.Message.StartsWith("!") -> handleCommand line y.Message
                 | _ when a.Message.Contains("PING") -> irc_ping state.writer line
-                | _ when a.Message.Contains("+iwx") -> identifyAndJoin line
+                | _ when state.botState = Unidentified && a.Message.Contains("+iwx") -> identifyAndJoin line
                 | _ -> writeText <| Input line
     | _ -> Console.WriteLine(line)
