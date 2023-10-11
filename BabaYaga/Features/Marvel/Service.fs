@@ -23,5 +23,5 @@ let get (characterName:string) =
     } 
 
 let getMarvelCharacter (name:string) = 
-    let character = get name |> Async.RunSynchronously
+    let character = get name 
     if character.Description = "" then "No description found :(" else character.Description

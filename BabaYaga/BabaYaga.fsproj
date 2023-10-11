@@ -12,6 +12,7 @@
     <Compile Include="Modules\ConsoleWriter.fs" />
     <Compile Include="Modules\Environment.fs" />
     <Compile Include="Modules\TcpClientProxy.fs" />
+    <Compile Include="Modules\IrcCommands.fs" />
     <Compile Include="Infrastructure\ClientProxy.fs" />
     <Compile Include="Infrastructure\Auth0\Types.fs" />
     <Compile Include="Infrastructure\Auth0\Service.fs" />

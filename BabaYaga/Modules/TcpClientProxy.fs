@@ -9,7 +9,7 @@ let server = getEnvironmentVariables["SERVER"]
 let port  = int (getEnvironmentVariables["PORT"])
 
 let client = new TcpClient();
-client.Connect(server, port)
+client.ConnectAsync(server, port)
 
 let reader = new StreamReader(client.GetStream())
 let writer = new StreamWriter(client.GetStream())

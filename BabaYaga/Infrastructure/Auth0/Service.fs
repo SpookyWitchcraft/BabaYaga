@@ -37,7 +37,7 @@ let getNewAuthToken () =
     let cs = getEnvironmentVariables["CLIENT_SECRET"]
     let aud = getEnvironmentVariables["AUDIENCE"]
 
-    let response = post (buildRequest cid cs aud) au |> Async.RunSynchronously
+    let response = post (buildRequest cid cs aud) au 
     (response, Stopwatch.GetTimestamp())
 
 let expired (response:Auth0TokenResponse * int64) = 

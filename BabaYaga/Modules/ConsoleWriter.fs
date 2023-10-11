@@ -20,3 +20,7 @@ let writeText (input:ConsoleMessage) =
         Console.ForegroundColor <- ConsoleColor.DarkYellow
         Console.WriteLine(message)
         Console.ForegroundColor <- ConsoleColor.DarkRed
+
+let writeInputAndOutput (input:ConsoleMessage) (output:ConsoleMessage) = 
+    writeText input
+    writeText output

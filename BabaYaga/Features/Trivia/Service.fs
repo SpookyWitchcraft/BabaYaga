@@ -26,7 +26,7 @@ let get () =
         return tq
     } 
     
-    |> Async.RunSynchronously
+    
 
 let getTriviaQuestion () = 
     let triviaQuestion = get ()
@@ -77,7 +77,7 @@ let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:strin
 
             if results then 
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"{user} wins!  The answer is {b.Answer}."
-                state.writer.WriteLine(output)
+                TcpClientProxy.writeAsync(output) 
                 writeText <| Output output
                 updateScores &state user
 
@@ -86,13 +86,13 @@ let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:strin
                     let q = getTriviaQuestion()
                     let m = questionOutput q
                     let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
-                    state.writer.WriteLine(output)
+                    TcpClientProxy.writeAsync(output) 
                     state <- { state with question = q; rounds = roundsLeft }
                     writeText <| Output output
                 else
                     let winner = findWinner &state
                     let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
-                    state.writer.WriteLine(output)
+                    TcpClientProxy.writeAsync(output) 
                     state <- { state with question = None; scores = new Dictionary<string, int>() }
                     writeText <| Output output
             else
@@ -122,19 +122,19 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
             let roundsLeft = state.rounds - 1
             if roundsLeft > 0 then
                 let tuOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-                state.writer.WriteLine(tuOutput)
+                TcpClientProxy.writeAsync(tuOutput) 
                 let q = getTriviaQuestion()
                 let m = questionOutput q
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
-                state.writer.WriteLine(output)
+                TcpClientProxy.writeAsync(output) 
                 state <- { state with question = q; rounds = roundsLeft }
                 writeText <| Output tuOutput
             else
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-                state.writer.WriteLine(output)
+                TcpClientProxy.writeAsync(output) 
                 let winner = findWinner &state
                 let winnerOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
-                state.writer.WriteLine(winnerOutput)
+                TcpClientProxy.writeAsync(winnerOutput) 
                 state <- { state with question = None; scores = new Dictionary<string, int>() }
                 writeText <| Output output
         | HasHint (x, y) -> 
@@ -148,7 +148,7 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
 
             if elapsed >= 10 then 
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] (createHint y.Answer)
-                state.writer.WriteLine(output)
+                TcpClientProxy.writeAsync(output) 
                 writeText <| Output output
                 state <- { state with question = Some <| HasHint (x, y) }
             else

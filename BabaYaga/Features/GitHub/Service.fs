@@ -35,6 +35,6 @@ let createIssue (input:string) (issue:string) =
 
     let request = { Title = title; Body = $"{user}: {issue}"; Labels = [| "bug" |] }
     
-    let response = post request |> Async.RunSynchronously
+    let response = post request 
 
     $"Thank you {user} an issue has been created.  You may check the status here, {response.HtmlUrl}."

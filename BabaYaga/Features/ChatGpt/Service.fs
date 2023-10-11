@@ -21,5 +21,5 @@ let get (question:string) =
     } 
 
 let getGptAnswer (question:string) = 
-    let answer = get question |> Async.RunSynchronously
+    let answer = get question 
     answer
