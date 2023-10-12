@@ -23,5 +23,10 @@ let get (characterName:string) =
     } 
 
 let getMarvelCharacter (name:string) = 
-    let character = get name 
-    if character.Description = "" then "No description found :(" else character.Description
+    async {
+        let! character = get name 
+        if character.Description = "" then 
+            return "No description found :(" 
+        else 
+            return character.Description
+    }

@@ -10,8 +10,6 @@ open System.Collections.Generic
 type ChannelMessage = 
     { UserInfo: string; Channel: string; Message: string }
 
-
-
 let initialState = 
     { 
         question = None
@@ -37,36 +35,45 @@ let getMessageInfo (line:string) =
             Some({ UserInfo = split[1]; Channel = messageDetails[2]; Message = split[2]})
 
 let handleTriviaCommand (input:string) (triviaRounds:string) = 
-    let out = irc_privmsg input
+    async {
+        let out = IrcCommands.privmsg input
 
-    match state.question with
-        | None -> 
-            state <- { state with question = Trivia.Service.getTriviaQuestion(); rounds = int triviaRounds }
-            out <| Trivia.Service.questionOutput state.question
-        | _ -> ()
+        match state.question with
+            | None -> 
+                state <- { state with question = Trivia.Service.getTriviaQuestion(); rounds = int triviaRounds }
+                do! (out <| Trivia.Service.questionOutput state.question)
+            | _ -> ()
+    }
 
 let handleCommand (input:string) (message:string) = 
-    let split = message.Split(' ', 2)
-    let command = split[0]
+    async {
+        let split = message.Split(' ', 2)
+        let command = split[0]
 
-    let out = irc_privmsg input
+        let out = IrcCommands.privmsg input
 
-    match command with
-    | "!coinflip" -> out <| CoinFlip.Service.flip ()
-    | "!roll" -> out <| Roll.Service.getDice split[1]
-    | "!trivia" -> 
-        let l = split.Length
-        if l = 2 then
-            handleTriviaCommand input split[1]
-        else
-            handleTriviaCommand input "0"
-    | "!chatgpt" -> 
-        let answer = ChatGpt.Service.getGptAnswer split[1]
-        answer 
-        |> List.iter out
-    | "!marvel" -> out <| Marvel.Service.getMarvelCharacter split[1]
-    | "!report" -> out <| GitHub.Service.createIssue input split[1]
-    | _ -> out "command not found 👻"
+        match command with
+        | "!coinflip" -> do! out <| CoinFlip.Service.flip ()
+        | "!roll" -> do! out <| Roll.Service.getDice split[1]
+        | "!trivia" -> 
+            let l = split.Length
+            if l = 2 then
+                do! handleTriviaCommand input split[1]
+            else
+                do! handleTriviaCommand input "0"
+        | "!chatgpt" -> 
+            let! answer = ChatGpt.Service.getGptAnswer split[1]
+            do! 
+                answer 
+                |> List.map out
+                |> Async.Sequential
+                |> Async.Ignore
+        | "!marvel" -> 
+            let! charDescription = Marvel.Service.getMarvelCharacter split[1]
+            do! out <| charDescription
+        | "!report" -> do! out <| GitHub.Service.createIssue input split[1]
+        | _ -> do! out "command not found 👻"    
+    }
 
 let timer = new Timer(
           TimerCallback (fun _ -> Trivia.Service.checkQuestionStatus(&state)),
@@ -92,10 +99,10 @@ async {
         match messageInfo with
         | Some a -> //(Trivia.Service.checkAnswer &state a.Message a.UserInfo)
                     match a with
-                    | y when a.Message.StartsWith("!") -> handleCommand line y.Message
-                    | _ when a.Message.Contains("PING") -> irc_ping line
-                    | _ when a.Message.Contains("+iwx") -> identifyAndJoin line
-                    | _ when state.botState = Unidentified && a.Message.Contains("+iwx") -> identifyAndJoin line
+                    | y when a.Message.StartsWith("!") -> do! handleCommand line y.Message
+                    | _ when a.Message.Contains("PING") -> do! IrcCommands.ping line
+                    | _ when a.Message.Contains("+iwx") -> do! IrcCommands.identifyAndJoin line
+                    //| _ when state.botState = Unidentified && a.Message.Contains("+iwx") -> IrcCommands.identifyAndJoin line
                     | _ -> writeText <| Input line
         | _ -> Console.WriteLine(line)
 } |> Async.RunSynchronously
