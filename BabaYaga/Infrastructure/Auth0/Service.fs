@@ -32,13 +32,15 @@ let buildRequest(id:string) (secret:string) (audience:string) =
   { GrantType = "client_credentials"; ClientId = id; ClientSecret = secret; Audience = audience }
 
 let getNewAuthToken () = 
-    let au = getEnvironmentVariables["AUTH_URL"]
-    let cid = getEnvironmentVariables["CLIENT_ID"]
-    let cs = getEnvironmentVariables["CLIENT_SECRET"]
-    let aud = getEnvironmentVariables["AUDIENCE"]
+    async {
+        let au = getEnvironmentVariables["AUTH_URL"]
+        let cid = getEnvironmentVariables["CLIENT_ID"]
+        let cs = getEnvironmentVariables["CLIENT_SECRET"]
+        let aud = getEnvironmentVariables["AUDIENCE"]
 
-    let response = post (buildRequest cid cs aud) au 
-    (response, Stopwatch.GetTimestamp())
+        let! response = post (buildRequest cid cs aud) au 
+        return (response, Stopwatch.GetTimestamp())
+    }
 
 let expired (response:Auth0TokenResponse * int64) = 
     let (a, b) = response
@@ -47,9 +49,11 @@ let expired (response:Auth0TokenResponse * int64) =
     a.AccessToken = "" || a.ExpiresIn <= int seconds
 
 let getToken () = 
-    match authResponse with
-    | ar when expired ar ->
-        let (a, b) = getNewAuthToken()
-        authResponse <- (a, b)
-        a.AccessToken
-    | (a, _) -> a.AccessToken
+    async {
+        match authResponse with
+        | ar when expired ar ->
+            let! (a, b) = getNewAuthToken()
+            authResponse <- (a, b)
+            return a.AccessToken
+        | (a, _) -> return a.AccessToken
+    }

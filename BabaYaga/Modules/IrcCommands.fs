@@ -52,6 +52,6 @@ let privmsg (input : string) (message : string) =
 
 let identifyAndJoin (line:string) = 
     async {
-        do! identify line
+        ignore <| identify line
         do! joinChannel line
     }

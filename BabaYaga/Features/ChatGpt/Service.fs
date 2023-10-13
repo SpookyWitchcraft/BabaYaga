@@ -6,7 +6,7 @@ open System.Net.Http.Headers
 
 let get (question:string) = 
     async {
-        let token = Auth0.Service.getToken ()
+        let! token = Auth0.Service.getToken ()
 
         client.DefaultRequestHeaders.Authorization <- new AuthenticationHeaderValue("Bearer", token)
 

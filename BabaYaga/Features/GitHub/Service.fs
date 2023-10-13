@@ -28,13 +28,15 @@ let post (issue:GitHubRequest) =
     
 
 let createIssue (input:string) (issue:string) =
-    let user = (input.Split('!')[0]).Split(':')[1]
-    let guid = Guid.NewGuid().ToString()
-    let now = DateTime.UtcNow.ToString("yyyy-MM-dd")
-    let title = $"{guid} - {now} - {user}"
+    async {
+        let user = (input.Split('!')[0]).Split(':')[1]
+        let guid = Guid.NewGuid().ToString()
+        let now = DateTime.UtcNow.ToString("yyyy-MM-dd")
+        let title = $"{guid} - {now} - {user}"
 
-    let request = { Title = title; Body = $"{user}: {issue}"; Labels = [| "bug" |] }
+        let request = { Title = title; Body = $"{user}: {issue}"; Labels = [| "bug" |] }
     
-    let response = post request 
+        let! response = post request 
 
-    $"Thank you {user} an issue has been created.  You may check the status here, {response.HtmlUrl}."
+        return $"Thank you {user} an issue has been created.  You may check the status here, {response.HtmlUrl}."
+    }

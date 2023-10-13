@@ -34,16 +34,16 @@ let getMessageInfo (line:string) =
         else
             Some({ UserInfo = split[1]; Channel = messageDetails[2]; Message = split[2]})
 
-let handleTriviaCommand (input:string) (triviaRounds:string) = 
-    async {
-        let out = IrcCommands.privmsg input
+//let handleTriviaCommand (input:string) (triviaRounds:string) = 
+//    async {
+//        let out = IrcCommands.privmsg input
 
-        match state.question with
-            | None -> 
-                state <- { state with question = Trivia.Service.getTriviaQuestion(); rounds = int triviaRounds }
-                do! (out <| Trivia.Service.questionOutput state.question)
-            | _ -> ()
-    }
+//        match state.question with
+//            | None -> 
+//                state <- { state with question = Trivia.Service.getTriviaQuestion(); rounds = int triviaRounds }
+//                do! (out <| Trivia.Service.questionOutput state.question)
+//            | _ -> ()
+//    }
 
 let handleCommand (input:string) (message:string) = 
     async {
@@ -55,12 +55,12 @@ let handleCommand (input:string) (message:string) =
         match command with
         | "!coinflip" -> do! out <| CoinFlip.Service.flip ()
         | "!roll" -> do! out <| Roll.Service.getDice split[1]
-        | "!trivia" -> 
-            let l = split.Length
-            if l = 2 then
-                do! handleTriviaCommand input split[1]
-            else
-                do! handleTriviaCommand input "0"
+        //| "!trivia" -> 
+        //    let l = split.Length
+        //    if l = 2 then
+        //        do! handleTriviaCommand input split[1]
+        //    else
+        //        do! handleTriviaCommand input "0"
         | "!chatgpt" -> 
             let! answer = ChatGpt.Service.getGptAnswer split[1]
             do! 
@@ -71,16 +71,18 @@ let handleCommand (input:string) (message:string) =
         | "!marvel" -> 
             let! charDescription = Marvel.Service.getMarvelCharacter split[1]
             do! out <| charDescription
-        | "!report" -> do! out <| GitHub.Service.createIssue input split[1]
+        | "!report" -> 
+            let! issueResponse = GitHub.Service.createIssue input split[1]
+            do! out <| issueResponse
         | _ -> do! out "command not found 👻"    
     }
 
-let timer = new Timer(
-          TimerCallback (fun _ -> Trivia.Service.checkQuestionStatus(&state)),
-          state,
-          0,
-          500
-        )
+//let timer = new Timer(
+//          TimerCallback (fun _ -> Trivia.Service.checkQuestionStatus(&state)),
+//          state,
+//          0,
+//          500
+//        )
 
 
 
@@ -90,7 +92,10 @@ let timer = new Timer(
 //reuse http stuff
 //handle http codes better
 //handle timers better
+
 async {
+    do! IrcCommands.initializeCommunication
+
     while(TcpClientProxy.reader.EndOfStream = false) do
         let! line = TcpClientProxy.readAsync() 
 
