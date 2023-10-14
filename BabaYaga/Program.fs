@@ -64,7 +64,7 @@ let handleCommand (input:string) (message:string) =
         | "!chatgpt" -> 
             let! answer = ChatGpt.Service.getGptAnswer split[1]
             do! 
-                answer 
+                answer.Lines 
                 |> List.map out
                 |> Async.Sequential
                 |> Async.Ignore

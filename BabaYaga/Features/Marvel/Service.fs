@@ -2,24 +2,15 @@
 
 open Marvel.Types
 
-open Newtonsoft.Json
-open System.Net.Http.Headers
 open Infrastructure.ClientProxy
 
-let get (characterName:string) = 
+let get (characterName:string) : Async<MarvelCharacter> = 
     async {
         let! token = Auth0.Service.getToken ()
 
-        client.DefaultRequestHeaders.Authorization <- new AuthenticationHeaderValue("Bearer", token)
+        let! results = get $"/api/marvel/{characterName}" token
 
-        let! response = client.GetStringAsync(buildUrl $"/api/marvel/{characterName}") |> Async.AwaitTask
-        
-        if response = "" then
-            return { Id = ""; Name = ""; Description = "" }
-        else
-            let tq = JsonConvert.DeserializeObject<MarvelCharacter>(response)
-
-            return tq
+        return results
     } 
 
 let getMarvelCharacter (name:string) = 

@@ -2,28 +2,14 @@
 
 open Modules.Environment
 open Types
-open Newtonsoft.Json
-open System.Net.Http
-open System.Text
 open System.Diagnostics
 open Infrastructure.ClientProxy
 
-let post (issue:Auth0TokenRequest) (authUrl:string) = 
+let post (request:Auth0TokenRequest) (authUrl:string) : Async<Auth0TokenResponse> = 
     async {
-        let serialized = JsonConvert.SerializeObject(issue)
+        let! response = post request Object authUrl
 
-        let content = new StringContent(serialized, Encoding.UTF8, "application/json")
-
-        let! response = client.PostAsync(authUrl, content) |> Async.AwaitTask
-        
-        let! results = response.Content.ReadAsStringAsync() |> Async.AwaitTask
-
-        if results = "" then
-            return { AccessToken = ""; ExpiresIn = 86400; TokenType = "" }
-        else
-            let tq = JsonConvert.DeserializeObject<Auth0TokenResponse>(results)
-
-            return tq
+        return response
     } 
 
 let mutable authResponse = ({ AccessToken = ""; ExpiresIn = 86400; TokenType = "" }, Stopwatch.GetTimestamp())
