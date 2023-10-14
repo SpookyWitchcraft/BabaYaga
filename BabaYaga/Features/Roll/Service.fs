@@ -11,3 +11,8 @@ let getDice (message:string) =
     let sum = List.sum values
     let agg = String.Join(",", values)
     $"You rolled {agg} for a total of {sum}"
+
+let handleRollCommand (message:string) = 
+    async {
+        do! IrcCommands.privmsg <| getDice message
+    }

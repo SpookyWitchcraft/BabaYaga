@@ -21,3 +21,10 @@ let getMarvelCharacter (name:string) =
         else 
             return character.Description
     }
+
+let handleMarvelCommand (characterName:string) = 
+    async {
+        let! charDescription = getMarvelCharacter characterName
+        
+        do! IrcCommands.privmsg charDescription
+    }

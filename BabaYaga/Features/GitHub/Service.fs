@@ -26,3 +26,10 @@ let createIssue (input:string) (issue:string) =
 
         return $"Thank you {user} an issue has been created.  You may check the status here, {response.HtmlUrl}."
     }
+
+let handleGitHubCommand (input:string) (issue:string) = 
+    async {
+        let! issueResponse = createIssue input issue
+        
+        do! IrcCommands.privmsg issueResponse
+    }

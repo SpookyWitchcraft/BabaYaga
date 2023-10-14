@@ -41,12 +41,10 @@ let joinChannel (line:string) =
         do! TcpClientProxy.writeAsync(output + "\r\n") 
     }
 
-let privmsg (input : string) (message : string) =
+let privmsg (message : string) =
     async {
         do! TcpClientProxy.writeAsync(sprintf "PRIVMSG %s %s\r\n" channel message)
-        //this is the actual command someone typed
-        writeText <| Command input
-        //this is the actual output (shouldn't be in the same function)
+
         writeText <| Output message
     }
 

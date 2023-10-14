@@ -15,3 +15,13 @@ let get (question:string) : Async<GptResponse> =
 let getGptAnswer (question:string) = 
     let answer = get question 
     answer
+
+let handleGptCommand (question:string) = 
+    async {
+    let! answer = getGptAnswer question
+    do! 
+        answer.Lines 
+        |> List.map IrcCommands.privmsg
+        |> Async.Sequential
+        |> Async.Ignore
+    }

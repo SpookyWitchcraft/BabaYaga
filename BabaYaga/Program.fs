@@ -1,10 +1,6 @@
 ﻿open System
-open System.IO
-open System.Net.Sockets
-open Modules.Environment
 open Modules.ConsoleWriter
 open Application.Types
-open System.Threading
 open System.Collections.Generic
 
 type ChannelMessage = 
@@ -34,57 +30,22 @@ let getMessageInfo (line:string) =
         else
             Some({ UserInfo = split[1]; Channel = messageDetails[2]; Message = split[2]})
 
-//let handleTriviaCommand (input:string) (triviaRounds:string) = 
-//    async {
-//        let out = IrcCommands.privmsg input
-
-//        match state.question with
-//            | None -> 
-//                state <- { state with question = Trivia.Service.getTriviaQuestion(); rounds = int triviaRounds }
-//                do! (out <| Trivia.Service.questionOutput state.question)
-//            | _ -> ()
-//    }
-
 let handleCommand (input:string) (message:string) = 
     async {
         let split = message.Split(' ', 2)
         let command = split[0]
 
-        let out = IrcCommands.privmsg input
+        writeText <| Command input
 
         match command with
-        | "!coinflip" -> do! out <| CoinFlip.Service.flip ()
-        | "!roll" -> do! out <| Roll.Service.getDice split[1]
-        //| "!trivia" -> 
-        //    let l = split.Length
-        //    if l = 2 then
-        //        do! handleTriviaCommand input split[1]
-        //    else
-        //        do! handleTriviaCommand input "0"
-        | "!chatgpt" -> 
-            let! answer = ChatGpt.Service.getGptAnswer split[1]
-            do! 
-                answer.Lines 
-                |> List.map out
-                |> Async.Sequential
-                |> Async.Ignore
-        | "!marvel" -> 
-            let! charDescription = Marvel.Service.getMarvelCharacter split[1]
-            do! out <| charDescription
-        | "!report" -> 
-            let! issueResponse = GitHub.Service.createIssue input split[1]
-            do! out <| issueResponse
-        | _ -> do! out "command not found 👻"    
+        | "!coinflip" -> do! CoinFlip.Service.handleFlipCommand ()
+        | "!roll" -> do! Roll.Service.handleRollCommand message
+        | "!trivia" -> do! Trivia.Service.handleTriviaCommand split
+        | "!chatgpt" -> do! ChatGpt.Service.handleGptCommand split[1]
+        | "!marvel" -> do! Marvel.Service.handleMarvelCommand split[1]
+        | "!report" -> do! GitHub.Service.handleGitHubCommand input split[1]
+        | _ -> do! IrcCommands.privmsg "command not found 👻"    
     }
-
-//let timer = new Timer(
-//          TimerCallback (fun _ -> Trivia.Service.checkQuestionStatus(&state)),
-//          state,
-//          0,
-//          500
-//        )
-
-
 
 //clean up initial irc commands
 //set app to 'identified'
