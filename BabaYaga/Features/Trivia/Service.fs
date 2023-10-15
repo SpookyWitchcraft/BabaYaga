@@ -13,6 +13,16 @@ open System.Collections.Generic
 open System.Linq
 open Modules.ConsoleWriter
 open System.Timers
+open System.Threading
+
+let initialState = 
+    { 
+        questionStatus = Disabled
+        rounds = 0
+        scores = new Dictionary<string, int>()
+    }
+
+let mutable state = initialState
 
 let get () = 
     async {
@@ -27,123 +37,117 @@ let get () =
         return tq
     } 
     
-    
-
 let getTriviaQuestion () = 
     async {
         let! triviaQuestion = get ()
 
         let currentTime = Stopwatch.GetTimestamp()
 
-        return Some <| NeedsHint (currentTime, triviaQuestion)
+        return NeedsHint (currentTime, triviaQuestion)
     }
 
-let questionOutput (questionStatus:QuestionStatus option) = 
+let questionOutput (questionStatus:QuestionStatus) = 
     match questionStatus with
-    | Some a -> 
-        match a with | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) ->
+        | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) ->
             $"[{b.Id}]: {b.Question}"
-    | _ -> "Oops there was a problem ☀"
 
-let updateScores (state:byref<ApplicationState>) (winner:string) = 
-    if state.scores.ContainsKey winner then
-        state.scores[winner] <- state.scores[winner] + 1
-    else
-        state.scores.Add(winner, 1)
+//let updateScores (winner:string) = 
+//    if state.scores.ContainsKey winner then
+//        state.scores[winner] <- state.scores[winner] + 1
+//    else
+//        state.scores.Add(winner, 1)
 
-let findWinner (state:byref<ApplicationState>) = 
-    if state.scores.Count < 1 then
-        let output = "The round is now over!  No one scored!"
-        writeText <| Output output
-        output
-    else
-        let best = int <| state.scores.Values.Max()
-        let winners = 
-            state.scores
-            |> Seq.filter (fun kvp -> kvp.Value = best)
-            |> Seq.map (fun kvp -> kvp.Key)
-            |> Seq.toArray
-            |> String.concat ", "
-        let output = $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
-        writeText <| Output output
-        output
+//let findWinner () = 
+//    if state.scores.Count < 1 then
+//        let output = "The round is now over!  No one scored!"
+//        writeText <| Output output
+//        output
+//    else
+//        let best = int <| state.scores.Values.Max()
+//        let winners = 
+//            state.scores
+//            |> Seq.filter (fun kvp -> kvp.Value = best)
+//            |> Seq.map (fun kvp -> kvp.Key)
+//            |> Seq.toArray
+//            |> String.concat ", "
+//        let output = $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
+//        writeText <| Output output
+//        output
 
-let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:string) = 
-    match state.question with
-    | None -> ()
-    | Some q ->
-        match q with
+let checkAnswer (message:ChannelMessage) = 
+    async {
+        match state.questionStatus with
         | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) -> 
-            let results = b.Answer =? message
- 
-            let user = (userInfo.Split(':')[0]).Split('!')[0]
+            let results = b.Answer =? message.Message
+
+            let user = (message.UserInfo.Split(':')[0]).Split('!')[0]
 
             if results then 
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"{user} wins!  The answer is {b.Answer}."
                 TcpClientProxy.writeAsync(output) 
                 writeText <| Output output
-                updateScores &state user
+                updateScores user
 
                 let roundsLeft = state.rounds - 1
                 if roundsLeft > 0 then
-                    let q = getTriviaQuestion()
+                    let! q = getTriviaQuestion()
                     let m = questionOutput q
                     let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
                     TcpClientProxy.writeAsync(output) 
-                    state <- { state with question = q; rounds = roundsLeft }
+                    state <- { state with questionStatus = q; rounds = roundsLeft }
                     writeText <| Output output
                 else
-                    let winner = findWinner &state
+                    let winner = findWinner ()
                     let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
                     TcpClientProxy.writeAsync(output) 
-                    state <- { state with question = None; scores = new Dictionary<string, int>() }
+                    state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
                     writeText <| Output output
             else
                 ()
+    }
 
-let createHint (answer:string) = 
-    let rand = new Random()
-    let values = List.init answer.Length (fun a -> 
-        let next = rand.Next(0, 3)
-        if next = 0 || not (Char.IsLetter answer[a] || Char.IsDigit answer[a]) then
-            string answer[a]
-        else
-            "*"
-        )
+//let createHint (answer:string) = 
+//    let rand = new Random()
+//    let values = List.init answer.Length (fun a -> 
+//        let next = rand.Next(0, 3)
+//        if next = 0 || not (Char.IsLetter answer[a] || Char.IsDigit answer[a]) then
+//            string answer[a]
+//        else
+//            "*"
+//        )
     
-    let asterisks = String.concat "" values
-    let index = rand.Next(0, answer.Length)
-    let pre = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
-    let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
-    "Here's a hint: " + final
+//    let asterisks = String.concat "" values
+//    let index = rand.Next(0, answer.Length)
+//    let pre = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
+//    let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
+//    "Here's a hint: " + final
 
-let checkQuestionStatus (state:byref<ApplicationState>) = 
-    match state.question with
-    | Some a ->
-        match a with
+let checkQuestionStatus = 
+    async {
+        match state.questionStatus with
         | TimesUp (_, y) ->
             let roundsLeft = state.rounds - 1
             if roundsLeft > 0 then
                 let tuOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
                 TcpClientProxy.writeAsync(tuOutput) 
-                let q = getTriviaQuestion()
+                let! q = getTriviaQuestion()
                 let m = questionOutput q
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
                 TcpClientProxy.writeAsync(output) 
-                state <- { state with question = q; rounds = roundsLeft }
+                state <- { state with questionStatus = q; rounds = roundsLeft }
                 writeText <| Output tuOutput
             else
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
                 TcpClientProxy.writeAsync(output) 
-                let winner = findWinner &state
+                let winner = findWinner ()
                 let winnerOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
                 TcpClientProxy.writeAsync(winnerOutput) 
-                state <- { state with question = None; scores = new Dictionary<string, int>() }
+                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
                 writeText <| Output output
         | HasHint (x, y) -> 
             let elapsed = (Stopwatch.GetTimestamp() - x) / Stopwatch.Frequency
             if elapsed >= 20 then 
-                state <- { state with question = Some <| TimesUp (x, y) }
+                state <- { state with questionStatus = TimesUp (x, y) }
             else 
                 ()
         | NeedsHint (x, y) -> 
@@ -153,36 +157,36 @@ let checkQuestionStatus (state:byref<ApplicationState>) =
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] (createHint y.Answer)
                 TcpClientProxy.writeAsync(output) 
                 writeText <| Output output
-                state <- { state with question = Some <| HasHint (x, y) }
+                state <- { state with questionStatus = HasHint (x, y) }
             else
                 ()
-    | _ -> ()
+        | _ -> ()                                   
+    }
 
+let timer = new Timer(
+        TimerCallback (fun _ -> async { do! checkQuestionStatus } |> Async.StartImmediate),
+        null,
+        0,
+        500
+    )
+
+timer.Change(Timeout.Infinite, Timeout.Infinite)
+timer.Change(0, 500)
+
+let beginTrivia (triviaRounds:string) = 
+    async {
+        match state.questionStatus with
+            | Disabled -> 
+                let! nextQuestion = getTriviaQuestion();
+                state <- { state with questionStatus = nextQuestion; rounds = int triviaRounds }
+                do! IrcCommands.privmsg <| questionOutput state.questionStatus
+            | _ -> ()
+    }
 
 let handleTriviaCommand (splitMessage:string array) = 
     async {
-        let l = split.Length
-        if l = 2 then
-            do! handleTriviaCommand input split[1]
-        else
-            do! handleTriviaCommand input "0"
+        match splitMessage.Length with
+        | 2 -> do! beginTrivia splitMessage[1]
+        | _ -> do! beginTrivia "0"
     }
 
-///////////////////////////
-//let handleTriviaCommand (input:string) (triviaRounds:string) = 
-//    async {
-//        let out = IrcCommands.privmsg input
-
-//        match state.question with
-//            | None -> 
-//                state <- { state with question = Trivia.Service.getTriviaQuestion(); rounds = int triviaRounds }
-//                do! (out <| Trivia.Service.questionOutput state.question)
-//            | _ -> ()
-//    }
-
-//let timer = new Timer(
-//        TimerCallback (fun _ -> Trivia.Service.checkQuestionStatus(&state)),
-//        state,
-//        0,
-//        500
-//    )

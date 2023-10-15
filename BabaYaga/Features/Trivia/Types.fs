@@ -1,6 +1,7 @@
 ﻿module Trivia.Types
 
 open System.Runtime.Serialization
+open System.Collections.Generic
 
 [<DataContract>]
 type TriviaQuestion = 
@@ -18,3 +19,11 @@ type QuestionStatus =
     | TimesUp of int64 * TriviaQuestion
     | NeedsHint of int64 * TriviaQuestion
     | HasHint of int64 * TriviaQuestion
+    | Disabled
+    | Answered
+
+type ApplicationState = {
+    questionStatus : QuestionStatus
+    rounds : int
+    scores : Dictionary<string, int>
+}

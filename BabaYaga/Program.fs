@@ -1,35 +1,21 @@
-﻿open System
-open Modules.ConsoleWriter
+﻿open Modules.ConsoleWriter
 open Application.Types
-open System.Collections.Generic
 
-type ChannelMessage = 
-    { UserInfo: string; Channel: string; Message: string }
-
-let initialState = 
-    { 
-        question = None
-        rounds = 0
-        scores = new Dictionary<string, int>()
-        botState = Unidentified
-    }
-
-let mutable state = initialState
-
-Console.ForegroundColor <- ConsoleColor.DarkRed
+let mutable botState = Unidentified
 
 let getMessageInfo (line:string) = 
     let split = line.Split(':')
     
-    if split.Length < 3 then
-        Some({ UserInfo = ""; Channel = ""; Message = line})
-    else
+    match split.Length with
+    | a when a < 3 -> Some({ UserInfo = ""; Channel = ""; Message = line})
+    | _ -> 
         let messageDetails = split[1].Split(' ')
-        if messageDetails.Length < 4 then
+        match messageDetails with
+        | a when a.Length < 4 -> 
             None
-        else
-            Some({ UserInfo = split[1]; Channel = messageDetails[2]; Message = split[2]})
-
+        | _ -> 
+            Some({ UserInfo = split[1]; Channel = messageDetails[1]; Message = split[2]})
+                
 let handleCommand (input:string) (message:string) = 
     async {
         let split = message.Split(' ', 2)
@@ -47,12 +33,29 @@ let handleCommand (input:string) (message:string) =
         | _ -> do! IrcCommands.privmsg "command not found 👻"    
     }
 
-//clean up initial irc commands
-//set app to 'identified'
-//split state by module
-//reuse http stuff
-//handle http codes better
-//handle timers better
+let handleStateConditions (message:ChannelMessage) = 
+    async {
+        match Trivia.Service.state.questionStatus with
+        | Trivia.Types.Disabled -> return ()
+        | _ -> do! Trivia.Service.checkAnswer message
+    }
+
+let handleIdentification (line: string) = 
+    async {
+        do! IrcCommands.identifyAndJoin line
+
+        botState <- Identified
+    }
+
+let handleEstablishedMessages (message:ChannelMessage) (line:string) = 
+    async {
+        match message with
+        | _ when message.Message.StartsWith("!") -> do! handleCommand line message.Message
+        | _ when message.Message.Contains("PING") -> do! IrcCommands.ping line
+        | _ when message.Message.Contains("+iwx") -> do! IrcCommands.identifyAndJoin line
+        | _ when botState = Unidentified && message.Message.Contains("+iwx") -> do! handleIdentification line
+        | _ -> writeText <| Input line
+    }
 
 async {
     do! IrcCommands.initializeCommunication
@@ -63,12 +66,8 @@ async {
         let messageInfo = getMessageInfo line
 
         match messageInfo with
-        | Some a -> //(Trivia.Service.checkAnswer &state a.Message a.UserInfo)
-                    match a with
-                    | y when a.Message.StartsWith("!") -> do! handleCommand line y.Message
-                    | _ when a.Message.Contains("PING") -> do! IrcCommands.ping line
-                    | _ when a.Message.Contains("+iwx") -> do! IrcCommands.identifyAndJoin line
-                    //| _ when state.botState = Unidentified && a.Message.Contains("+iwx") -> IrcCommands.identifyAndJoin line
-                    | _ -> writeText <| Input line
-        | _ -> Console.WriteLine(line)
+        | Some message -> 
+            do! handleEstablishedMessages message line
+            do! handleStateConditions message
+        | _ -> writeText <| Input line
 } |> Async.RunSynchronously
