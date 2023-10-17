@@ -122,6 +122,27 @@ let checkAnswer (message:ChannelMessage) =
 //    let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
 //    "Here's a hint: " + final
 
+
+//new question
+//	disables get new question timer
+//	gets a new question
+//	stores it in state
+//	sets state to "needs hint"
+//needs hint
+//	if enough time has elapsed, output a hint
+//	then set state to "has hint"
+//has hint
+//	if enough time has elapsed,
+//	then set state to time has run out
+//time has run out
+//	decreases round count
+//	set state to answered
+//the question has been answered
+//	set get new question timer
+//the game has ended/disabled
+//	deactivate game timer
+
+
 let checkQuestionStatus = 
     async {
         match state.questionStatus with
@@ -129,19 +150,19 @@ let checkQuestionStatus =
             let roundsLeft = state.rounds - 1
             if roundsLeft > 0 then
                 let tuOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-                TcpClientProxy.writeAsync(tuOutput) 
+                do! TcpClientProxy.writeAsync(tuOutput) 
                 let! q = getTriviaQuestion()
                 let m = questionOutput q
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
-                TcpClientProxy.writeAsync(output) 
+                do! TcpClientProxy.writeAsync(output) 
                 state <- { state with questionStatus = q; rounds = roundsLeft }
                 writeText <| Output tuOutput
             else
                 let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-                TcpClientProxy.writeAsync(output) 
+                do! TcpClientProxy.writeAsync(output) 
                 let winner = findWinner ()
                 let winnerOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
-                TcpClientProxy.writeAsync(winnerOutput) 
+                do! TcpClientProxy.writeAsync(winnerOutput) 
                 state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
                 writeText <| Output output
         | HasHint (x, y) -> 
@@ -166,8 +187,8 @@ let checkQuestionStatus =
 let timer = new Timer(
         TimerCallback (fun _ -> async { do! checkQuestionStatus } |> Async.StartImmediate),
         null,
-        0,
-        500
+        Timeout.Infinite,
+        Timeout.Infinite
     )
 
 timer.Change(Timeout.Infinite, Timeout.Infinite)
@@ -180,6 +201,7 @@ let beginTrivia (triviaRounds:string) =
                 let! nextQuestion = getTriviaQuestion();
                 state <- { state with questionStatus = nextQuestion; rounds = int triviaRounds }
                 do! IrcCommands.privmsg <| questionOutput state.questionStatus
+                ignore <| timer.Change(0, 500)
             | _ -> ()
     }
 
