@@ -51,28 +51,28 @@ let questionOutput (questionStatus:QuestionStatus) =
         | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) ->
             $"[{b.Id}]: {b.Question}"
 
-//let updateScores (winner:string) = 
-//    if state.scores.ContainsKey winner then
-//        state.scores[winner] <- state.scores[winner] + 1
-//    else
-//        state.scores.Add(winner, 1)
+let updateScores (winner:string) = 
+    if state.scores.ContainsKey winner then
+        state.scores[winner] <- state.scores[winner] + 1
+    else
+        state.scores.Add(winner, 1)
 
-//let findWinner () = 
-//    if state.scores.Count < 1 then
-//        let output = "The round is now over!  No one scored!"
-//        writeText <| Output output
-//        output
-//    else
-//        let best = int <| state.scores.Values.Max()
-//        let winners = 
-//            state.scores
-//            |> Seq.filter (fun kvp -> kvp.Value = best)
-//            |> Seq.map (fun kvp -> kvp.Key)
-//            |> Seq.toArray
-//            |> String.concat ", "
-//        let output = $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
-//        writeText <| Output output
-//        output
+let findWinner () = 
+    if state.scores.Count < 1 then
+        let output = "The round is now over!  No one scored!"
+        writeText <| Output output
+        output
+    else
+        let best = int <| state.scores.Values.Max()
+        let winners = 
+            state.scores
+            |> Seq.filter (fun kvp -> kvp.Value = best)
+            |> Seq.map (fun kvp -> kvp.Key)
+            |> Seq.toArray
+            |> String.concat ", "
+        let output = $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
+        writeText <| Output output
+        output
 
 let checkAnswer (message:ChannelMessage) = 
     async {
@@ -106,101 +106,66 @@ let checkAnswer (message:ChannelMessage) =
                 ()
     }
 
-//let createHint (answer:string) = 
-//    let rand = new Random()
-//    let values = List.init answer.Length (fun a -> 
-//        let next = rand.Next(0, 3)
-//        if next = 0 || not (Char.IsLetter answer[a] || Char.IsDigit answer[a]) then
-//            string answer[a]
-//        else
-//            "*"
-//        )
-    
-//    let asterisks = String.concat "" values
-//    let index = rand.Next(0, answer.Length)
-//    let pre = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
-//    let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
-//    "Here's a hint: " + final
+let createHint (answer:string) = 
+    let rand = new Random()
+    let values = List.init answer.Length (fun a -> 
+        let next = rand.Next(0, 3)
+        if next = 0 || not (Char.IsLetter answer[a] || Char.IsDigit answer[a]) then
+            string answer[a]
+        else
+            "*"
+        )
+    let asterisks = String.concat "" values
+    let index = rand.Next(0, answer.Length)
+    let pre = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
+    let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
+    "Here's a hint: " + final
 
+let mutable timer = new Timer(null, null, Timeout.Infinite, Timeout.Infinite)
 
-//new question
-//	disables get new question timer
-//	gets a new question
-//	stores it in state
-//	sets state to "needs hint"
-//needs hint
-//	if enough time has elapsed, output a hint
-//	then set state to "has hint"
-//has hint
-//	if enough time has elapsed,
-//	then set state to time has run out
-//time has run out
-//	decreases round count
-//	set state to answered
-//the question has been answered
-//	set get new question timer
-//the game has ended/disabled
-//	deactivate game timer
-
-
+let elapsedTime (timestamp:int64) = 
+    (Stopwatch.GetTimestamp() - timestamp) / Stopwatch.Frequency
+ 
 let checkQuestionStatus = 
     async {
         match state.questionStatus with
-        | TimesUp (_, y) ->
-            let roundsLeft = state.rounds - 1
-            if roundsLeft > 0 then
-                let tuOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-                do! TcpClientProxy.writeAsync(tuOutput) 
-                let! q = getTriviaQuestion()
-                let m = questionOutput q
-                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
-                do! TcpClientProxy.writeAsync(output) 
-                state <- { state with questionStatus = q; rounds = roundsLeft }
-                writeText <| Output tuOutput
-            else
-                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-                do! TcpClientProxy.writeAsync(output) 
-                let winner = findWinner ()
-                let winnerOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
-                do! TcpClientProxy.writeAsync(winnerOutput) 
-                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
-                writeText <| Output output
-        | HasHint (x, y) -> 
-            let elapsed = (Stopwatch.GetTimestamp() - x) / Stopwatch.Frequency
-            if elapsed >= 20 then 
-                state <- { state with questionStatus = TimesUp (x, y) }
-            else 
-                ()
-        | NeedsHint (x, y) -> 
-            let elapsed = (Stopwatch.GetTimestamp() - x) / Stopwatch.Frequency
-
-            if elapsed >= 10 then 
-                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] (createHint y.Answer)
-                TcpClientProxy.writeAsync(output) 
-                writeText <| Output output
+        | NewQuestion -> 
+            let! question = getTriviaQuestion()
+            state <- { state with questionStatus = question }
+            do! IrcCommands.privmsg <| questionOutput question
+            ignore <| timer.Change(0, 500)
+        | NeedsHint (x, y) ->
+            match elapsedTime x >= 10 with
+            | true -> 
+                do! IrcCommands.privmsg (createHint y.Answer)
                 state <- { state with questionStatus = HasHint (x, y) }
-            else
-                ()
-        | _ -> ()                                   
+            | _ -> ()
+        | HasHint (x, y) ->
+            match elapsedTime x >= 20 with
+            | true -> state <- { state with questionStatus = TimesUp y }
+            | _ -> ()
+        | TimesUp y ->
+            let roundsLeft = state.rounds - 1
+            match roundsLeft with 
+            | 0 -> 
+                do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
+                do! IrcCommands.privmsg <| findWinner ()
+                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
+            | _ ->
+                do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
+                state <- { state with questionStatus = Answered; rounds = roundsLeft }
+        | Answered ->
+            state <- { state with questionStatus = NewQuestion }
+            ignore <| timer.Change(5000, 500)
+        | Disabled -> ignore <| timer.Change(Timeout.Infinite, Timeout.Infinite)
     }
-
-let timer = new Timer(
-        TimerCallback (fun _ -> async { do! checkQuestionStatus } |> Async.StartImmediate),
-        null,
-        Timeout.Infinite,
-        Timeout.Infinite
-    )
-
-timer.Change(Timeout.Infinite, Timeout.Infinite)
-timer.Change(0, 500)
 
 let beginTrivia (triviaRounds:string) = 
     async {
         match state.questionStatus with
             | Disabled -> 
-                let! nextQuestion = getTriviaQuestion();
-                state <- { state with questionStatus = nextQuestion; rounds = int triviaRounds }
-                do! IrcCommands.privmsg <| questionOutput state.questionStatus
+                state <- { state with rounds = int triviaRounds }
+                
                 ignore <| timer.Change(0, 500)
             | _ -> ()
     }
@@ -212,3 +177,9 @@ let handleTriviaCommand (splitMessage:string array) =
         | _ -> do! beginTrivia "0"
     }
 
+timer <- new Timer(
+        TimerCallback (fun _ -> async { do! checkQuestionStatus } |> Async.StartImmediate),
+        null,
+        Timeout.Infinite,
+        Timeout.Infinite
+    )

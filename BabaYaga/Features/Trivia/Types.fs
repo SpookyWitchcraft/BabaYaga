@@ -16,11 +16,12 @@ type TriviaQuestion =
         Category: string }
 
 type QuestionStatus = 
-    | TimesUp of int64 * TriviaQuestion
+    | TimesUp of TriviaQuestion
     | NeedsHint of int64 * TriviaQuestion
     | HasHint of int64 * TriviaQuestion
     | Disabled
     | Answered
+    | NewQuestion
 
 type ApplicationState = {
     questionStatus : QuestionStatus
