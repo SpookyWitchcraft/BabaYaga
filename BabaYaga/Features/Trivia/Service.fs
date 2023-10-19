@@ -12,7 +12,6 @@ open System
 open System.Collections.Generic
 open System.Linq
 open Modules.ConsoleWriter
-open System.Timers
 open System.Threading
 
 let initialState = 
@@ -48,8 +47,9 @@ let getTriviaQuestion () =
 
 let questionOutput (questionStatus:QuestionStatus) = 
     match questionStatus with
-        | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) ->
-            $"[{b.Id}]: {b.Question}"
+        | TimesUp q | NeedsHint (_, q) | HasHint(_, q) ->
+            $"[{q.Id}]: {q.Question}"
+        | _ -> "Something went wrong."
 
 let updateScores (winner:string) = 
     if state.scores.ContainsKey winner then
@@ -59,9 +59,7 @@ let updateScores (winner:string) =
 
 let findWinner () = 
     if state.scores.Count < 1 then
-        let output = "The round is now over!  No one scored!"
-        writeText <| Output output
-        output
+        "The round is now over!  No one scored!"
     else
         let best = int <| state.scores.Values.Max()
         let winners = 
@@ -77,33 +75,24 @@ let findWinner () =
 let checkAnswer (message:ChannelMessage) = 
     async {
         match state.questionStatus with
-        | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) -> 
-            let results = b.Answer =? message.Message
+        | TimesUp q | NeedsHint (_, q) | HasHint(_, q) -> 
+            let results = q.Answer =? message.Message
 
             let user = (message.UserInfo.Split(':')[0]).Split('!')[0]
 
-            if results then 
-                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"{user} wins!  The answer is {b.Answer}."
-                TcpClientProxy.writeAsync(output) 
-                writeText <| Output output
+            match results with
+            | true ->
+                do! IrcCommands.privmsg $"{user} wins! The answer is {q.Answer}."
                 updateScores user
 
-                let roundsLeft = state.rounds - 1
-                if roundsLeft > 0 then
-                    let! q = getTriviaQuestion()
-                    let m = questionOutput q
-                    let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
-                    TcpClientProxy.writeAsync(output) 
-                    state <- { state with questionStatus = q; rounds = roundsLeft }
-                    writeText <| Output output
-                else
+                match state.rounds - 1 with
+                | 0 | -1 ->
                     let winner = findWinner ()
-                    let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
-                    TcpClientProxy.writeAsync(output) 
+                    do! IrcCommands.privmsg winner
                     state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
-                    writeText <| Output output
-            else
-                ()
+                | _ -> state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
+            | _ -> ()
+        | _ -> ()
     }
 
 let createHint (answer:string) = 
@@ -121,7 +110,7 @@ let createHint (answer:string) =
     let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
     "Here's a hint: " + final
 
-let mutable timer = new Timer(null, null, Timeout.Infinite, Timeout.Infinite)
+let mutable timer = new Timer((fun _ -> ()), null, Timeout.Infinite, Timeout.Infinite)
 
 let elapsedTime (timestamp:int64) = 
     (Stopwatch.GetTimestamp() - timestamp) / Stopwatch.Frequency
@@ -131,32 +120,31 @@ let checkQuestionStatus =
         match state.questionStatus with
         | NewQuestion -> 
             let! question = getTriviaQuestion()
+            ignore <| timer.Change(500, 500)
             state <- { state with questionStatus = question }
             do! IrcCommands.privmsg <| questionOutput question
-            ignore <| timer.Change(0, 500)
         | NeedsHint (x, y) ->
             match elapsedTime x >= 10 with
             | true -> 
-                do! IrcCommands.privmsg (createHint y.Answer)
                 state <- { state with questionStatus = HasHint (x, y) }
+                do! IrcCommands.privmsg (createHint y.Answer)
             | _ -> ()
         | HasHint (x, y) ->
             match elapsedTime x >= 20 with
             | true -> state <- { state with questionStatus = TimesUp y }
             | _ -> ()
         | TimesUp y ->
-            let roundsLeft = state.rounds - 1
-            match roundsLeft with 
+            match state.rounds with 
             | 0 -> 
+                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
                 do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
                 do! IrcCommands.privmsg <| findWinner ()
-                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
             | _ ->
+                state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
                 do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
-                state <- { state with questionStatus = Answered; rounds = roundsLeft }
         | Answered ->
-            state <- { state with questionStatus = NewQuestion }
             ignore <| timer.Change(5000, 500)
+            state <- { state with questionStatus = NewQuestion }
         | Disabled -> ignore <| timer.Change(Timeout.Infinite, Timeout.Infinite)
     }
 
@@ -164,9 +152,8 @@ let beginTrivia (triviaRounds:string) =
     async {
         match state.questionStatus with
             | Disabled -> 
-                state <- { state with rounds = int triviaRounds }
-                
-                ignore <| timer.Change(0, 500)
+                state <- { state with questionStatus = NewQuestion; rounds = int triviaRounds }
+                do! checkQuestionStatus
             | _ -> ()
     }
 
