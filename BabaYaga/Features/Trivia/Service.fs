@@ -12,10 +12,20 @@ open System
 open System.Collections.Generic
 open System.Linq
 open Modules.ConsoleWriter
+open System.Threading
+
+let initialState = 
+    { 
+        questionStatus = Disabled
+        rounds = 0
+        scores = new Dictionary<string, int>()
+    }
+
+let mutable state = initialState
 
 let get () = 
     async {
-        let token = Auth0.Service.getToken ()
+        let! token = Auth0.Service.getToken ()
 
         client.DefaultRequestHeaders.Authorization <- new AuthenticationHeaderValue("Bearer", token)
 
@@ -26,29 +36,28 @@ let get () =
         return tq
     } 
     
-    |> Async.RunSynchronously
-
 let getTriviaQuestion () = 
-    let triviaQuestion = get ()
+    async {
+        let! triviaQuestion = get ()
 
-    let currentTime = Stopwatch.GetTimestamp()
+        let currentTime = Stopwatch.GetTimestamp()
 
-    Some <| NeedsHint (currentTime, triviaQuestion)
+        return NeedsHint (currentTime, triviaQuestion)
+    }
 
-let questionOutput (questionStatus:QuestionStatus option) = 
+let questionOutput (questionStatus:QuestionStatus) = 
     match questionStatus with
-    | Some a -> 
-        match a with | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) ->
-            $"[{b.Id}]: {b.Question}"
-    | _ -> "Oops there was a problem ☀"
+        | TimesUp q | NeedsHint (_, q) | HasHint(_, q) ->
+            $"[{q.Id}]: {q.Question}"
+        | _ -> "Something went wrong."
 
-let updateScores (state:byref<ApplicationState>) (winner:string) = 
+let updateScores (winner:string) = 
     if state.scores.ContainsKey winner then
         state.scores[winner] <- state.scores[winner] + 1
     else
         state.scores.Add(winner, 1)
 
-let findWinner (state:byref<ApplicationState>) = 
+let findWinner () = 
     if state.scores.Count < 1 then
         "The round is now over!  No one scored!"
     else
@@ -59,40 +68,32 @@ let findWinner (state:byref<ApplicationState>) =
             |> Seq.map (fun kvp -> kvp.Key)
             |> Seq.toArray
             |> String.concat ", "
-        $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
+        let output = $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
+        writeText <| Output output
+        output
 
-let checkAnswer (state:byref<ApplicationState>) (message:string) (userInfo:string) = 
-    match state.question with
-    | None -> ()
-    | Some q ->
-        match q with
-        | TimesUp (_, b) | NeedsHint (_, b) | HasHint(_, b) -> 
-            let results = b.Answer =? message
- 
-            let user = (userInfo.Split(':')[0]).Split('!')[0]
+let checkAnswer (message:ChannelMessage) = 
+    async {
+        match state.questionStatus with
+        | TimesUp q | NeedsHint (_, q) | HasHint(_, q) -> 
+            let results = q.Answer =? message.Message
 
-            if results then 
-                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"{user} wins!  The answer is {b.Answer}."
-                state.writer.WriteLine(output)
-                writeText <| Output output
-                updateScores &state user
+            let user = (message.UserInfo.Split(':')[0]).Split('!')[0]
 
-                let roundsLeft = state.rounds - 1
-                if roundsLeft > 0 then
-                    let q = getTriviaQuestion()
-                    let m = questionOutput q
-                    let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
-                    state.writer.WriteLine(output)
-                    state <- { state with question = q; rounds = roundsLeft }
-                    writeText <| Output output
-                else
-                    let winner = findWinner &state
-                    let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
-                    state.writer.WriteLine(output)
-                    state <- { state with question = None; scores = new Dictionary<string, int>() }
-                    writeText <| Output output
-            else
-                ()
+            match results with
+            | true ->
+                do! IrcCommands.privmsg $"{user} wins! The answer is {q.Answer}."
+                updateScores user
+
+                match state.rounds - 1 with
+                | 0 | -1 ->
+                    let winner = findWinner ()
+                    do! IrcCommands.privmsg winner
+                    state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
+                | _ -> state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
+            | _ -> ()
+        | _ -> ()
+    }
 
 let createHint (answer:string) = 
     let rand = new Random()
@@ -103,51 +104,69 @@ let createHint (answer:string) =
         else
             "*"
         )
-    
     let asterisks = String.concat "" values
     let index = rand.Next(0, answer.Length)
     let pre = asterisks |> String.mapi (fun i x -> if i = index then answer[i] else x)
     let final = if pre.Contains('*') then pre else pre |> String.mapi (fun i x -> if i = index then '*' else x)
     "Here's a hint: " + final
 
-let checkQuestionStatus (state:byref<ApplicationState>) = 
-    match state.question with
-    | Some a ->
-        match a with
-        | TimesUp (_, y) ->
-            let roundsLeft = state.rounds - 1
-            if roundsLeft > 0 then
-                let tuOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-                state.writer.WriteLine(tuOutput)
-                let q = getTriviaQuestion()
-                let m = questionOutput q
-                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] m
-                state.writer.WriteLine(output)
-                state <- { state with question = q; rounds = roundsLeft }
-                writeText <| Output tuOutput
-            else
-                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] $"Times up! The answer is {y.Answer}"
-                state.writer.WriteLine(output)
-                let winner = findWinner &state
-                let winnerOutput = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] winner
-                state.writer.WriteLine(winnerOutput)
-                state <- { state with question = None; scores = new Dictionary<string, int>() }
-                writeText <| Output output
-        | HasHint (x, y) -> 
-            let elapsed = (Stopwatch.GetTimestamp() - x) / Stopwatch.Frequency
-            if elapsed >= 20 then 
-                state <- { state with question = Some <| TimesUp (x, y) }
-            else 
-                ()
-        | NeedsHint (x, y) -> 
-            let elapsed = (Stopwatch.GetTimestamp() - x) / Stopwatch.Frequency
+let mutable timer = new Timer((fun _ -> ()), null, Timeout.Infinite, Timeout.Infinite)
 
-            if elapsed >= 10 then 
-                let output = sprintf "PRIVMSG %s %s" getEnvironmentVariables["CHANNEL"] (createHint y.Answer)
-                state.writer.WriteLine(output)
-                writeText <| Output output
-                state <- { state with question = Some <| HasHint (x, y) }
-            else
-                ()
-    | _ -> ()
+let elapsedTime (timestamp:int64) = 
+    (Stopwatch.GetTimestamp() - timestamp) / Stopwatch.Frequency
+ 
+let checkQuestionStatus = 
+    async {
+        match state.questionStatus with
+        | NewQuestion -> 
+            let! question = getTriviaQuestion()
+            ignore <| timer.Change(500, 500)
+            state <- { state with questionStatus = question }
+            do! IrcCommands.privmsg <| questionOutput question
+        | NeedsHint (x, y) ->
+            match elapsedTime x >= 10 with
+            | true -> 
+                state <- { state with questionStatus = HasHint (x, y) }
+                do! IrcCommands.privmsg (createHint y.Answer)
+            | _ -> ()
+        | HasHint (x, y) ->
+            match elapsedTime x >= 20 with
+            | true -> state <- { state with questionStatus = TimesUp y }
+            | _ -> ()
+        | TimesUp y ->
+            match state.rounds with 
+            | 0 -> 
+                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
+                do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
+                do! IrcCommands.privmsg <| findWinner ()
+            | _ ->
+                state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
+                do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
+        | Answered ->
+            ignore <| timer.Change(5000, 500)
+            state <- { state with questionStatus = NewQuestion }
+        | Disabled -> ignore <| timer.Change(Timeout.Infinite, Timeout.Infinite)
+    }
 
+let beginTrivia (triviaRounds:string) = 
+    async {
+        match state.questionStatus with
+            | Disabled -> 
+                state <- { state with questionStatus = NewQuestion; rounds = int triviaRounds }
+                do! checkQuestionStatus
+            | _ -> ()
+    }
+
+let handleTriviaCommand (splitMessage:string array) = 
+    async {
+        match splitMessage.Length with
+        | 2 -> do! beginTrivia splitMessage[1]
+        | _ -> do! beginTrivia "0"
+    }
+
+timer <- new Timer(
+        TimerCallback (fun _ -> async { do! checkQuestionStatus } |> Async.StartImmediate),
+        null,
+        Timeout.Infinite,
+        Timeout.Infinite
+    )

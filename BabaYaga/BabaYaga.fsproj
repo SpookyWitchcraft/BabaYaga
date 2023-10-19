@@ -11,6 +11,8 @@
     </None>
     <Compile Include="Modules\ConsoleWriter.fs" />
     <Compile Include="Modules\Environment.fs" />
+    <Compile Include="Modules\TcpClientProxy.fs" />
+    <Compile Include="Modules\IrcCommands.fs" />
     <Compile Include="Infrastructure\ClientProxy.fs" />
     <Compile Include="Infrastructure\Auth0\Types.fs" />
     <Compile Include="Infrastructure\Auth0\Service.fs" />
@@ -18,6 +20,7 @@
     <Compile Include="Features\Marvel\Service.fs" />
     <Compile Include="Features\Roll\Service.fs" />
     <Compile Include="Features\CoinFlip\Service.fs" />
+    <Compile Include="Features\ChatGpt\Types.fs" />
     <Compile Include="Features\ChatGpt\Service.fs" />
     <Compile Include="Features\GitHub\Types.fs" />
     <Compile Include="Features\GitHub\Service.fs" />

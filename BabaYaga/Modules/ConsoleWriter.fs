@@ -12,9 +12,15 @@ let writeText (input:ConsoleMessage) =
     | Command message -> 
         Console.ForegroundColor <- ConsoleColor.Red
         Console.WriteLine(message)
+        Console.ForegroundColor <- ConsoleColor.DarkRed
     | Input message -> 
         Console.ForegroundColor <- ConsoleColor.DarkRed
         Console.WriteLine(message)
     | Output message -> 
         Console.ForegroundColor <- ConsoleColor.DarkYellow
         Console.WriteLine(message)
+        Console.ForegroundColor <- ConsoleColor.DarkRed
+
+let writeInputAndOutput (input:ConsoleMessage) (output:ConsoleMessage) = 
+    writeText input
+    writeText output

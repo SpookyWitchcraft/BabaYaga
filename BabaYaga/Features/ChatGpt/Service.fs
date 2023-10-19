@@ -1,25 +1,27 @@
 ﻿module ChatGpt.Service
 
-open Newtonsoft.Json
 open Infrastructure.ClientProxy
-open System.Net.Http.Headers
+open Types
 
-let get (question:string) = 
+let get (question:string) : Async<GptResponse> = 
     async {
-        let token = Auth0.Service.getToken ()
+        let! token = Auth0.Service.getToken ()
 
-        client.DefaultRequestHeaders.Authorization <- new AuthenticationHeaderValue("Bearer", token)
+        let! results = get $"/api/chatgpt/{question}" token
 
-        let! response =  client.GetStringAsync(buildUrl $"/api/chatgpt/{question}") |> Async.AwaitTask
-        
-        if response = "" then
-            return ["No Good"]
-        else
-            let tq = JsonConvert.DeserializeObject<string list>(response)
-
-            return tq
+        return results
     } 
 
 let getGptAnswer (question:string) = 
-    let answer = get question |> Async.RunSynchronously
+    let answer = get question 
     answer
+
+let handleGptCommand (question:string) = 
+    async {
+    let! answer = getGptAnswer question
+    do! 
+        answer.Lines 
+        |> List.map IrcCommands.privmsg
+        |> Async.Sequential
+        |> Async.Ignore
+    }

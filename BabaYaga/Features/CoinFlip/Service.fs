@@ -8,3 +8,8 @@ let flip () =
     match results with
     | 0 -> "tails"
     | _ -> "heads"
+
+let handleFlipCommand () = 
+    async {
+        do! IrcCommands.privmsg <| flip ()
+    }
