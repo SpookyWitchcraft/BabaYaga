@@ -134,11 +134,11 @@ let checkQuestionStatus =
             | true -> state <- { state with questionStatus = TimesUp y }
             | _ -> ()
         | TimesUp y ->
-            match state.rounds with 
-            | 0 -> 
-                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
+            match state.rounds - 1 with 
+            | 0 | -1 -> 
                 do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
                 do! IrcCommands.privmsg <| findWinner ()
+                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
             | _ ->
                 state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
                 do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"

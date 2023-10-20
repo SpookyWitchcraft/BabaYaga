@@ -52,7 +52,6 @@ let handleEstablishedMessages (message:ChannelMessage) (line:string) =
         match message with
         | _ when message.Message.StartsWith("!") -> do! handleCommand line message.Message
         | _ when message.Message.Contains("PING") -> do! IrcCommands.ping line
-        | _ when message.Message.Contains("+iwx") -> do! IrcCommands.identifyAndJoin line
         | _ when botState = Unidentified && message.Message.Contains("+iwx") -> do! handleIdentification line
         | _ -> writeText <| Input line
     }
