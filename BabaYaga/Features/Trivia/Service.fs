@@ -95,7 +95,7 @@ let matchResults (question:TriviaQuestion) (results:bool) (user:string) =
 let checkAnswer (message:ChannelMessage) = 
     async {
         match state.questionStatus with
-        | TimesUp q | NeedsHint (_, q) | HasHint(_, q) -> 
+        | NeedsHint (t, q) | HasHint(t, q) -> 
             let results = q.Answer =? message.Message
 
             let user = (message.UserInfo.Split(':')[0]).Split('!')[0]
