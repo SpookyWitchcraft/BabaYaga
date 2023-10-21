@@ -24,7 +24,7 @@ let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) =
         let content = new StringContent(serialized, Encoding.UTF8, "application/json")
         
         match auth with
-        | Token a -> client.DefaultRequestHeaders.Authorization <- new AuthenticationHeaderValue("Bearer", a)
+        | Token a -> client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", a)
         | Object -> ignore <| client.DefaultRequestHeaders.Remove("Authorization")
 
         let! response = client.PostAsync(url, content) |> Async.AwaitTask
@@ -36,7 +36,7 @@ let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) =
 
 let get<'a> (urlSuffix:string) (token:string) = 
     async {
-        client.DefaultRequestHeaders.Authorization <- new AuthenticationHeaderValue("Bearer", token)
+        client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", token)
 
         let! response = client.GetAsync(buildUrl urlSuffix) |> Async.AwaitTask
         

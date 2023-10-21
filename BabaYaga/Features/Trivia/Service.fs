@@ -18,7 +18,7 @@ let initialState =
     { 
         questionStatus = Disabled
         rounds = 0
-        scores = new Dictionary<string, int>()
+        scores = Dictionary<string, int>()
     }
 
 let mutable state = initialState
@@ -27,7 +27,7 @@ let get () =
     async {
         let! token = Auth0.Service.getToken ()
 
-        client.DefaultRequestHeaders.Authorization <- new AuthenticationHeaderValue("Bearer", token)
+        client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", token)
 
         let! response = client.GetStringAsync(buildUrl "/api/trivia") |> Async.AwaitTask
         
@@ -72,6 +72,26 @@ let findWinner () =
         writeText <| Output output
         output
 
+let checkRoundsAndWinner = 
+    async {
+        match state.rounds - 1 with
+        | x when x <= 0 ->
+            let winner = findWinner ()
+            do! IrcCommands.privmsg winner
+            state <- { state with questionStatus = Disabled; scores = Dictionary<string, int>() }
+        | _ -> state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
+    }
+
+let matchResults (question:TriviaQuestion) (results:bool) (user:string) =
+    async {
+        match results with
+        | true ->
+            do! IrcCommands.privmsg $"{user} wins! The answer is {question.Answer}."
+            updateScores user
+            do! checkRoundsAndWinner
+        | _ -> ()
+    }
+
 let checkAnswer (message:ChannelMessage) = 
     async {
         match state.questionStatus with
@@ -80,23 +100,12 @@ let checkAnswer (message:ChannelMessage) =
 
             let user = (message.UserInfo.Split(':')[0]).Split('!')[0]
 
-            match results with
-            | true ->
-                do! IrcCommands.privmsg $"{user} wins! The answer is {q.Answer}."
-                updateScores user
-
-                match state.rounds - 1 with
-                | 0 | -1 ->
-                    let winner = findWinner ()
-                    do! IrcCommands.privmsg winner
-                    state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
-                | _ -> state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
-            | _ -> ()
+            do! matchResults q results user
         | _ -> ()
     }
 
 let createHint (answer:string) = 
-    let rand = new Random()
+    let rand = Random()
     let values = List.init answer.Length (fun a -> 
         let next = rand.Next(0, 3)
         if next = 0 || not (Char.IsLetter answer[a] || Char.IsDigit answer[a]) then
@@ -135,10 +144,10 @@ let checkQuestionStatus =
             | _ -> ()
         | TimesUp y ->
             match state.rounds - 1 with 
-            | 0 | -1 -> 
+            | x when x <= 0 -> 
                 do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
                 do! IrcCommands.privmsg <| findWinner ()
-                state <- { state with questionStatus = Disabled; scores = new Dictionary<string, int>() }
+                state <- { state with questionStatus = Disabled; scores = Dictionary<string, int>() }
             | _ ->
                 state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
                 do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
