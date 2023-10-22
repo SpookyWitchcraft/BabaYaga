@@ -17,8 +17,8 @@ type TriviaQuestion =
 
 type QuestionStatus = 
     | TimesUp of TriviaQuestion
-    | NeedsHint of int64 * TriviaQuestion
-    | HasHint of int64 * TriviaQuestion
+    | NeedsHint of TriviaQuestion
+    | HasHint of TriviaQuestion
     | Disabled
     | Answered
     | NewQuestion
@@ -27,4 +27,5 @@ type ApplicationState = {
     questionStatus : QuestionStatus
     rounds : int
     scores : Dictionary<string, int>
+    timestamp : int64
 }

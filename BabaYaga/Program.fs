@@ -25,7 +25,7 @@ let handleCommand (input:string) (message:string) =
 
         match command with
         | "!coinflip" -> do! CoinFlip.Service.handleFlipCommand ()
-        | "!roll" -> do! Roll.Service.handleRollCommand message
+        | "!roll" -> do! Roll.Service.handleRollCommand split[1]
         | "!trivia" -> do! Trivia.Service.handleTriviaCommand split
         | "!chatgpt" -> do! ChatGpt.Service.handleGptCommand split[1]
         | "!marvel" -> do! Marvel.Service.handleMarvelCommand split[1]

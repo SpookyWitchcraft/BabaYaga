@@ -10,8 +10,6 @@ open System.Net.Http.Headers
 open System.Diagnostics
 open System
 open System.Collections.Generic
-open System.Linq
-open Modules.ConsoleWriter
 open System.Threading
 
 let initialState = 
@@ -19,6 +17,7 @@ let initialState =
         questionStatus = Disabled
         rounds = 0
         scores = Dictionary<string, int>()
+        timestamp = 0
     }
 
 let mutable state = initialState
@@ -42,42 +41,56 @@ let getTriviaQuestion () =
 
         let currentTime = Stopwatch.GetTimestamp()
 
-        return NeedsHint (currentTime, triviaQuestion)
+        return NeedsHint triviaQuestion, currentTime
     }
 
 let questionOutput (questionStatus:QuestionStatus) = 
     match questionStatus with
-        | TimesUp q | NeedsHint (_, q) | HasHint(_, q) ->
+        | TimesUp q | NeedsHint q | HasHint q ->
             $"[{q.Id}]: {q.Question}"
         | _ -> "Something went wrong."
 
+let elapsedTime (timestamp:int64) = 
+    (Stopwatch.GetTimestamp() - timestamp) / Stopwatch.Frequency
+
+let getScore () = 
+    match state.questionStatus with
+    | NeedsHint _ -> 202 - int (elapsedTime state.timestamp)
+    | HasHint _ -> 50 - int (elapsedTime state.timestamp)
+    | _ -> 200
+
 let updateScores (winner:string) = 
     if state.scores.ContainsKey winner then
-        state.scores[winner] <- state.scores[winner] + 1
+        state.scores[winner] <- state.scores[winner] + getScore()
     else
-        state.scores.Add(winner, 1)
+        state.scores.Add(winner, getScore())
+
+let writeWinners(winners: string[]) = 
+    async {
+        for w in winners do
+            do! IrcCommands.privmsg w
+    }
 
 let findWinner () = 
     if state.scores.Count < 1 then
-        "The round is now over!  No one scored!"
+        [|"The round is now over!  No one scored!"|]
     else
-        let best = int <| state.scores.Values.Max()
+        let takeCount = if state.scores.Count > 3 then 3 else state.scores.Count
         let winners = 
             state.scores
-            |> Seq.filter (fun kvp -> kvp.Value = best)
-            |> Seq.map (fun kvp -> kvp.Key)
+            |> Seq.sortByDescending(fun x -> x.Value)
+            |> Seq.take(takeCount)
             |> Seq.toArray
-            |> String.concat ", "
-        let output = $"The Round is now over!  With a score of {best}, the win goes to: {winners}"
-        writeText <| Output output
-        output
+            |> Array.indexed
+            |> Array.map(fun (i, x) -> $"{[i + 1]}: {x.Key} = {x.Value}")
+        winners
 
 let checkRoundsAndWinner = 
     async {
         match state.rounds - 1 with
         | x when x <= 0 ->
-            let winner = findWinner ()
-            do! IrcCommands.privmsg winner
+            do! IrcCommands.privmsg $"The game has ended, here are the scores!"
+            do! writeWinners <| findWinner()
             state <- { state with questionStatus = Disabled; scores = Dictionary<string, int>() }
         | _ -> state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
     }
@@ -95,7 +108,7 @@ let matchResults (question:TriviaQuestion) (results:bool) (user:string) =
 let checkAnswer (message:ChannelMessage) = 
     async {
         match state.questionStatus with
-        | NeedsHint (t, q) | HasHint(t, q) -> 
+        | NeedsHint q | HasHint q -> 
             let results = q.Answer =? message.Message
 
             let user = (message.UserInfo.Split(':')[0]).Split('!')[0]
@@ -120,33 +133,31 @@ let createHint (answer:string) =
     "Here's a hint: " + final
 
 let mutable timer = new Timer((fun _ -> ()), null, Timeout.Infinite, Timeout.Infinite)
-
-let elapsedTime (timestamp:int64) = 
-    (Stopwatch.GetTimestamp() - timestamp) / Stopwatch.Frequency
  
 let checkQuestionStatus = 
     async {
         match state.questionStatus with
         | NewQuestion -> 
-            let! question = getTriviaQuestion()
+            let! (question, time) = getTriviaQuestion()
             ignore <| timer.Change(500, 500)
-            state <- { state with questionStatus = question }
+            state <- { state with questionStatus = question; timestamp = time }
             do! IrcCommands.privmsg <| questionOutput question
-        | NeedsHint (x, y) ->
-            match elapsedTime x >= 10 with
+        | NeedsHint q ->
+            match elapsedTime state.timestamp >= 10 with
             | true -> 
-                state <- { state with questionStatus = HasHint (x, y) }
-                do! IrcCommands.privmsg (createHint y.Answer)
+                state <- { state with questionStatus = HasHint q }
+                do! IrcCommands.privmsg (createHint q.Answer)
             | _ -> ()
-        | HasHint (x, y) ->
-            match elapsedTime x >= 20 with
-            | true -> state <- { state with questionStatus = TimesUp y }
+        | HasHint q ->
+            match elapsedTime state.timestamp >= 20 with
+            | true -> state <- { state with questionStatus = TimesUp q }
             | _ -> ()
         | TimesUp y ->
             match state.rounds - 1 with 
             | x when x <= 0 -> 
                 do! IrcCommands.privmsg $"Times up! The answer is {y.Answer}"
-                do! IrcCommands.privmsg <| findWinner ()
+                do! IrcCommands.privmsg $"The game has ended, here are the scores!"
+                do! writeWinners <| findWinner ()
                 state <- { state with questionStatus = Disabled; scores = Dictionary<string, int>() }
             | _ ->
                 state <- { state with questionStatus = Answered; rounds = state.rounds - 1 }
