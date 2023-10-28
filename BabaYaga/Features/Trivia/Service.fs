@@ -55,9 +55,9 @@ let elapsedTime (timestamp:int64) =
 
 let getScore () = 
     match state.questionStatus with
-    | NeedsHint _ -> 202 - int (elapsedTime state.timestamp)
-    | HasHint _ -> 50 - int (elapsedTime state.timestamp)
-    | _ -> 200
+    | NeedsHint _ -> 2
+    | HasHint _ -> 1
+    | _ -> 2
 
 let updateScores (winner:string) = 
     if state.scores.ContainsKey winner then
