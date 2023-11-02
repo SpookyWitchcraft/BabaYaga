@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="test.fs" />
     <None Include=".env">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
