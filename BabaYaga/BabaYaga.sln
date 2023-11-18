@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BabaYaga", "BabaYaga.fsproj", "{89C86D20-3959-4184-B08F-39BF33B97CD7}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "BabaYaga", "BabaYaga.fsproj", "{89C86D20-3959-4184-B08F-39BF33B97CD7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{95CB609C-4B96-4FA6-AD78-8A8A8A46B808}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BabaYaga.Tests", "..\BabaYaga.Tests\BabaYaga.Tests.fsproj", "{B43DC3AD-0C59-432F-B2A0-6173AAD668B9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,9 +19,16 @@ Global
 		{89C86D20-3959-4184-B08F-39BF33B97CD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89C86D20-3959-4184-B08F-39BF33B97CD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{89C86D20-3959-4184-B08F-39BF33B97CD7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B43DC3AD-0C59-432F-B2A0-6173AAD668B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B43DC3AD-0C59-432F-B2A0-6173AAD668B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B43DC3AD-0C59-432F-B2A0-6173AAD668B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B43DC3AD-0C59-432F-B2A0-6173AAD668B9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B43DC3AD-0C59-432F-B2A0-6173AAD668B9} = {95CB609C-4B96-4FA6-AD78-8A8A8A46B808}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CC1F9227-DFE7-4CFD-944D-9E00526093F4}
