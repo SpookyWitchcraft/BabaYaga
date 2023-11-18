@@ -5,10 +5,13 @@ open Newtonsoft.Json
 open Modules.Environment
 open System.Text
 open System.Net.Http.Headers
+open System.Net
 
 let client = new HttpClient()
 
 let root = getEnvironmentVariables["API_URL"]
+
+type HttpPost = string -> HttpContent -> System.Threading.Tasks.Task<HttpResponseMessage>
 
 type AuthType = 
     | Object
@@ -17,7 +20,16 @@ type AuthType =
 let buildUrl (suffix:string) = 
     $"{root}{suffix}"
 
-let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) = 
+
+let tester (url:string) (content:HttpContent) = 
+    task {
+        let x = new HttpResponseMessage(HttpStatusCode.Accepted);
+        x.Content <- content
+
+        return x
+    }
+
+let post<'a, 'b> (poster : HttpPost) (obj: 'a) (auth:AuthType) (url:string) = 
     async {
         let serialized = JsonConvert.SerializeObject(obj)
 
@@ -27,7 +39,7 @@ let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) =
         | Token a -> client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", a)
         | Object -> ignore <| client.DefaultRequestHeaders.Remove("Authorization")
 
-        let! response = client.PostAsync(url, content) |> Async.AwaitTask
+        let! response = poster url content |> Async.AwaitTask
 
         let! results = response.Content.ReadAsStringAsync() |> Async.AwaitTask
 
