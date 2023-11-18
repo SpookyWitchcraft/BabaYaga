@@ -78,7 +78,7 @@ let findWinner () =
         let takeCount = if state.scores.Count > 3 then 3 else state.scores.Count
         let winners = 
             state.scores
-            |> Seq.sortByDescending(fun x -> x.Value)
+            |> Seq.sortByDescending _.Value
             |> Seq.take(takeCount)
             |> Seq.toArray
             |> Array.indexed
