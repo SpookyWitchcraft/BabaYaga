@@ -5,10 +5,13 @@ open Newtonsoft.Json
 open Modules.Environment
 open System.Text
 open System.Net.Http.Headers
+open System.Net
 
 let client = new HttpClient()
 
 let root = getEnvironmentVariables["API_URL"]
+
+type HttpPost = string -> HttpContent -> System.Threading.Tasks.Task<HttpResponseMessage>
 
 type AuthType = 
     | Object
@@ -16,6 +19,15 @@ type AuthType =
 
 let buildUrl (suffix:string) = 
     $"{root}{suffix}"
+
+//(poster : HttpPost)
+//let tester (url:string) (content:HttpContent) = 
+//    task {
+//        let x = new HttpResponseMessage(HttpStatusCode.Accepted);
+//        x.Content <- content
+
+//        return x
+//    }
 
 let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) = 
     async {
