@@ -20,16 +20,16 @@ type AuthType =
 let buildUrl (suffix:string) = 
     $"{root}{suffix}"
 
+//(poster : HttpPost)
+//let tester (url:string) (content:HttpContent) = 
+//    task {
+//        let x = new HttpResponseMessage(HttpStatusCode.Accepted);
+//        x.Content <- content
 
-let tester (url:string) (content:HttpContent) = 
-    task {
-        let x = new HttpResponseMessage(HttpStatusCode.Accepted);
-        x.Content <- content
+//        return x
+//    }
 
-        return x
-    }
-
-let post<'a, 'b> (poster : HttpPost) (obj: 'a) (auth:AuthType) (url:string) = 
+let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) = 
     async {
         let serialized = JsonConvert.SerializeObject(obj)
 
@@ -39,7 +39,7 @@ let post<'a, 'b> (poster : HttpPost) (obj: 'a) (auth:AuthType) (url:string) =
         | Token a -> client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", a)
         | Object -> ignore <| client.DefaultRequestHeaders.Remove("Authorization")
 
-        let! response = poster url content |> Async.AwaitTask
+        let! response = client.PostAsync(url, content) |> Async.AwaitTask
 
         let! results = response.Content.ReadAsStringAsync() |> Async.AwaitTask
 
