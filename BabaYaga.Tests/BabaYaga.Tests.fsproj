@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CoinFlipTests.fs" />
     <Compile Include="RollTests.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />
