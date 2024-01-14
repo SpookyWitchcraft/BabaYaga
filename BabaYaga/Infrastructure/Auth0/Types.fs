@@ -1,23 +1,24 @@
 ﻿module Auth0.Types
 
-open Newtonsoft.Json
+open System.Text.Json.Serialization
+
 
 type Auth0TokenResponse = 
     {
-        [<JsonProperty(PropertyName = "access_token")>]
+        [<JsonPropertyName("access_token")>]
         AccessToken: string 
-        [<JsonProperty(PropertyName = "expires_in")>]
+        [<JsonPropertyName("expires_in")>]
         ExpiresIn: int
-        [<JsonProperty(PropertyName = "token_type")>]
+        [<JsonPropertyName("token_type")>]
         TokenType: string }
 
 type Auth0TokenRequest = 
     {
-        [<JsonProperty(PropertyName = "grant_type")>]
+        [<JsonPropertyName("grant_type")>]
         GrantType: string
-        [<JsonProperty(PropertyName = "client_id")>]
+        [<JsonPropertyName("client_id")>]
         ClientId: string
-        [<JsonProperty(PropertyName = "client_secret")>]
+        [<JsonPropertyName("client_secret")>]
         ClientSecret: string
-        [<JsonProperty(PropertyName = "audience")>]
+        [<JsonPropertyName("audience")>]
         Audience: string }

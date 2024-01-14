@@ -5,10 +5,10 @@ open Application.Types
 open Infrastructure.ClientProxy
 open Modules.Environment
 
-open Newtonsoft.Json
 open System.Net.Http.Headers
 open System.Diagnostics
 open System
+open System.Text.Json
 open System.Collections.Generic
 open System.Threading
 
@@ -26,13 +26,16 @@ let get () =
     async {
         let! token = Auth0.Service.getToken ()
 
-        client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", token)
+        match token with
+        | Error e -> return Error (e)
+        | Ok a ->
+            client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", a.AccessToken)
 
-        let! response = client.GetStringAsync(buildUrl "/api/trivia") |> Async.AwaitTask
+            let! response = client.GetStreamAsync(buildUrl "/api/trivia") |> Async.AwaitTask
         
-        let tq = JsonConvert.DeserializeObject<TriviaQuestion>(response)
+            let tq = JsonSerializer.Deserialize<TriviaQuestion>(response)
 
-        return tq
+            return Ok(tq)
     } 
     
 let getTriviaQuestion () = 
@@ -41,7 +44,11 @@ let getTriviaQuestion () =
 
         let currentTime = Stopwatch.GetTimestamp()
 
-        return NeedsHint triviaQuestion, currentTime
+        match triviaQuestion with
+        | Error e -> 
+            do! IrcCommands.privmsg e
+            return Disabled, currentTime
+        | Ok t -> return NeedsHint t, currentTime
     }
 
 let questionOutput (questionStatus:QuestionStatus) = 

@@ -4,22 +4,29 @@ open Marvel.Types
 
 open Infrastructure.ClientProxy
 
-let get (characterName:string) : Async<MarvelCharacter> = 
+let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
     async {
         let! token = Auth0.Service.getToken ()
 
-        let! results = get $"/api/marvel/{characterName}" token
+        match token with 
+        | Error e -> return Error(e)
+        | Ok a -> 
+            let! results = get $"/api/marvel/{characterName}" a.AccessToken
 
-        return results
+            return results
     } 
 
 let getMarvelCharacter (name:string) = 
     async {
         let! character = get name 
-        if character.Description = "" then 
-            return "No description found :(" 
-        else 
-            return character.Description
+
+        match character with
+        | Error e -> return $"There was an error! {e}"
+        | Ok a -> 
+            if a.Description = "" then 
+                return "No description found :(" 
+            else 
+                return a.Description
     }
 
 let handleMarvelCommand (characterName:string) = 

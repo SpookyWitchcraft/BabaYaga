@@ -1,17 +1,14 @@
 ﻿module Infrastructure.ClientProxy
 
 open System.Net.Http
-open Newtonsoft.Json
 open Modules.Environment
 open System.Text
+open System.Text.Json
 open System.Net.Http.Headers
-open System.Net
 
 let client = new HttpClient()
 
 let root = getEnvironmentVariables["API_URL"]
-
-type HttpPost = string -> HttpContent -> System.Threading.Tasks.Task<HttpResponseMessage>
 
 type AuthType = 
     | Object
@@ -20,18 +17,9 @@ type AuthType =
 let buildUrl (suffix:string) = 
     $"{root}{suffix}"
 
-//(poster : HttpPost)
-//let tester (url:string) (content:HttpContent) = 
-//    task {
-//        let x = new HttpResponseMessage(HttpStatusCode.Accepted);
-//        x.Content <- content
-
-//        return x
-//    }
-
 let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) = 
     async {
-        let serialized = JsonConvert.SerializeObject(obj)
+        let serialized = JsonSerializer.Serialize(obj)
 
         let content = new StringContent(serialized, Encoding.UTF8, "application/json")
         
@@ -41,9 +29,13 @@ let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) =
 
         let! response = client.PostAsync(url, content) |> Async.AwaitTask
 
-        let! results = response.Content.ReadAsStringAsync() |> Async.AwaitTask
+        let! results = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
 
-        return JsonConvert.DeserializeObject<'b>(results)
+        return 
+            try
+                Ok(JsonSerializer.Deserialize<'b>(results))
+            with
+                | Failure msg -> Error (msg)
     }
 
 let get<'a> (urlSuffix:string) (token:string) = 
@@ -52,7 +44,11 @@ let get<'a> (urlSuffix:string) (token:string) =
 
         let! response = client.GetAsync(buildUrl urlSuffix) |> Async.AwaitTask
         
-        let! results = response.Content.ReadAsStringAsync() |> Async.AwaitTask
+        let! results = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
 
-        return JsonConvert.DeserializeObject<'a>(results)
+        return 
+            try
+                Ok(JsonSerializer.Deserialize<'a>(results))
+            with
+                | Failure msg -> Error (msg)
     }

@@ -4,13 +4,18 @@ open Types
 open Infrastructure.ClientProxy
 open System
 
-let post (issue:GitHubRequest) : Async<GitHubResponse> = 
+//type HttpPost = string -> HttpContent -> System.Threading.Tasks.Task<HttpResponseMessage>
+
+let post (issue:GitHubRequest) = 
     async {
         let! token = Auth0.Service.getToken()
 
-        let! results = post issue (Token token) (buildUrl $"/api/github")
+        match token with
+        | Error e -> return Error(e)
+        | Ok a -> 
+            let! results = post issue (Token a.AccessToken) (buildUrl $"/api/github")
         
-        return results
+            return results
     } 
     
 let createIssue (input:string) (issue:string) =
@@ -24,7 +29,9 @@ let createIssue (input:string) (issue:string) =
     
         let! response = post request 
 
-        return $"Thank you {user} an issue has been created.  You may check the status here, {response.HtmlUrl}."
+        match response with
+        | Ok a -> return $"Thank you {user} an issue has been created.  You may check the status here, {a.HtmlUrl}."
+        | Error b -> return $"There was an error. {b}."
     }
 
 let handleGitHubCommand (input:string) (issue:string) = 
