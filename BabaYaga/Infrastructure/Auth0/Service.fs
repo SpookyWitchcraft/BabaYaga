@@ -5,7 +5,7 @@ open Types
 open System.Diagnostics
 open Infrastructure.ClientProxy
 
-let post (request:Auth0TokenRequest) (authUrl:string) : Async<Auth0TokenResponse> = 
+let post (request:Auth0TokenRequest) (authUrl:string) = 
     async {
         let! response = post request Object authUrl
 
@@ -39,7 +39,11 @@ let getToken () =
         match authResponse with
         | ar when expired ar ->
             let! (a, b) = getNewAuthToken()
-            authResponse <- (a, b)
-            return a.AccessToken
-        | (a, _) -> return a.AccessToken
+
+            match a with
+            | Error _ -> return a
+            | Ok o -> 
+                authResponse <- (o, b)
+                return Ok (o)
+        | (a, _) -> return Ok(a)
     }
