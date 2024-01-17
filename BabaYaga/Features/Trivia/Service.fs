@@ -5,10 +5,8 @@ open Application.Types
 open Infrastructure.ClientProxy
 open Modules.Environment
 
-open System.Net.Http.Headers
 open System.Diagnostics
 open System
-open System.Text.Json
 open System.Collections.Generic
 open System.Threading
 
@@ -29,13 +27,9 @@ let get () =
         match token with
         | Error e -> return Error (e)
         | Ok a ->
-            client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", a.AccessToken)
+            let! results = proxy.Get "/api/trivia" a.AccessToken
 
-            let! response = client.GetStreamAsync(buildUrl "/api/trivia") |> Async.AwaitTask
-        
-            let tq = JsonSerializer.Deserialize<TriviaQuestion>(response)
-
-            return Ok(tq)
+            return results
     } 
     
 let getTriviaQuestion () = 

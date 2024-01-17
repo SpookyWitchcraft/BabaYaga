@@ -1,7 +1,6 @@
 ﻿module Marvel.Service
 
 open Marvel.Types
-
 open Infrastructure.ClientProxy
 
 let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
@@ -11,7 +10,7 @@ let get (characterName:string) : Async<Result<MarvelCharacter, string>> =
         match token with 
         | Error e -> return Error(e)
         | Ok a -> 
-            let! results = get $"/api/marvel/{characterName}" a.AccessToken
+            let! results = proxy.Get $"/api/marvel/{characterName}" a.AccessToken
 
             return results
     } 

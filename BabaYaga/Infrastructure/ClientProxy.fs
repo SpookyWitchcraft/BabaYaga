@@ -5,50 +5,51 @@ open Modules.Environment
 open System.Text
 open System.Text.Json
 open System.Net.Http.Headers
+open Application.Types
 
 let client = new HttpClient()
 
 let root = getEnvironmentVariables["API_URL"]
 
-type AuthType = 
-    | Object
-    | Token of string
-
 let buildUrl (suffix:string) = 
     $"{root}{suffix}"
 
-let post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) = 
-    async {
-        let serialized = JsonSerializer.Serialize(obj)
+type ClientProxy() = 
+    interface IClientProxy with
+        member _.Get<'a> (urlSuffix:string) (token:string) = 
+            async {
+                client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", token)
 
-        let content = new StringContent(serialized, Encoding.UTF8, "application/json")
+                let! response = client.GetAsync(buildUrl urlSuffix) |> Async.AwaitTask
         
-        match auth with
-        | Token a -> client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", a)
-        | Object -> ignore <| client.DefaultRequestHeaders.Remove("Authorization")
+                let! results = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
 
-        let! response = client.PostAsync(url, content) |> Async.AwaitTask
+                return 
+                    try
+                        Ok(JsonSerializer.Deserialize<'a>(results))
+                    with
+                        | Failure msg -> Error (msg)
+            } 
 
-        let! results = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+        member _.Post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) = 
+            async {
+                let serialized = JsonSerializer.Serialize(obj)
 
-        return 
-            try
-                Ok(JsonSerializer.Deserialize<'b>(results))
-            with
-                | Failure msg -> Error (msg)
-    }
-
-let get<'a> (urlSuffix:string) (token:string) = 
-    async {
-        client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", token)
-
-        let! response = client.GetAsync(buildUrl urlSuffix) |> Async.AwaitTask
+                let content = new StringContent(serialized, Encoding.UTF8, "application/json")
         
-        let! results = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+                match auth with
+                | Token a -> client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", a)
+                | Object -> ignore <| client.DefaultRequestHeaders.Remove("Authorization")
 
-        return 
-            try
-                Ok(JsonSerializer.Deserialize<'a>(results))
-            with
-                | Failure msg -> Error (msg)
-    }
+                let! response = client.PostAsync(url, content) |> Async.AwaitTask
+
+                let! results = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
+
+                return 
+                    try
+                        Ok(JsonSerializer.Deserialize<'b>(results))
+                    with
+                        | Failure msg -> Error (msg)
+            }
+
+let mutable proxy = new ClientProxy() :> IClientProxy

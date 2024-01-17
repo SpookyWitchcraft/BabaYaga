@@ -1,10 +1,9 @@
 ﻿module GitHub.Service
 
 open Types
+open Application.Types
 open Infrastructure.ClientProxy
 open System
-
-//type HttpPost = string -> HttpContent -> System.Threading.Tasks.Task<HttpResponseMessage>
 
 let post (issue:GitHubRequest) = 
     async {
@@ -13,7 +12,7 @@ let post (issue:GitHubRequest) =
         match token with
         | Error e -> return Error(e)
         | Ok a -> 
-            let! results = post issue (Token a.AccessToken) (buildUrl $"/api/github")
+            let! results = proxy.Post issue (Token a.AccessToken) (buildUrl $"/api/github")
         
             return results
     } 

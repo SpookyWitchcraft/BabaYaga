@@ -2,12 +2,13 @@
 
 open Modules.Environment
 open Types
+open Application.Types
 open System.Diagnostics
 open Infrastructure.ClientProxy
 
 let post (request:Auth0TokenRequest) (authUrl:string) = 
     async {
-        let! response = post request Object authUrl
+        let! response = proxy.Post request Object authUrl
 
         return response
     } 

@@ -9,6 +9,7 @@
     <None Include=".env">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Compile Include="Types.fs" />
     <Compile Include="Modules\ConsoleWriter.fs" />
     <Compile Include="Modules\Environment.fs" />
     <Compile Include="Modules\TcpClientProxy.fs" />
@@ -25,7 +26,6 @@
     <Compile Include="Features\GitHub\Types.fs" />
     <Compile Include="Features\GitHub\Service.fs" />
     <Compile Include="Features\Trivia\Types.fs" />
-    <Compile Include="Types.fs" />
     <Compile Include="Features\Trivia\Service.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

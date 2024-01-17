@@ -10,7 +10,7 @@ let get (question:string) =
         match token with 
         | Error e -> return Error(e)
         | Ok a -> 
-            let! results = get $"/api/chatgpt/{question}" a.AccessToken
+            let! results = proxy.Get $"/api/chatgpt/{question}" a.AccessToken
 
             return results
     } 
