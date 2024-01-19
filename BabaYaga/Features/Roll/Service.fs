@@ -1,5 +1,7 @@
 ﻿module Roll.Service
 
+open Application.Types
+
 open System
 
 let getDice (message:string) = 

@@ -8,6 +8,9 @@ type IClientProxy =
     abstract member Get<'a> : string -> string -> Async<Result<'a, string>>
     abstract member Post<'a, 'b> : 'a -> AuthType -> string -> Async<Result<'b, string>>
 
+type IMessageHandler = 
+    abstract member Handle : string array -> Async<string>
+
 type BotState = Unidentified | Identified
 
 type ChannelMessage = 

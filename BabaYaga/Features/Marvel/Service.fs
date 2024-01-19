@@ -1,36 +1,40 @@
 ﻿module Marvel.Service
 
 open Marvel.Types
-open Infrastructure.ClientProxy
+open Application.Types
 
-let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
-    async {
-        let! token = Auth0.Service.getToken ()
+type MarvelHandeler(clientIn:IClientProxy) = 
+    let client = clientIn
 
-        match token with 
-        | Error e -> return Error(e)
-        | Ok a -> 
-            let! results = proxy.Get $"/api/marvel/{characterName}" a.AccessToken
+    let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
+        async {
+            let! token = Auth0.Service.getToken ()
 
-            return results
-    } 
+            match token with 
+            | Error e -> return Error(e)
+            | Ok a -> 
+                let! results = client.Get $"/api/marvel/{characterName}" a.AccessToken
 
-let getMarvelCharacter (name:string) = 
-    async {
-        let! character = get name 
+                return results
+        } 
 
-        match character with
-        | Error e -> return $"There was an error! {e}"
-        | Ok a -> 
-            if a.Description = "" then 
-                return "No description found :(" 
-            else 
-                return a.Description
-    }
+    let getMarvelCharacter (name:string) = 
+        async {
+            let! character = get name 
 
-let handleMarvelCommand (characterName:string) = 
-    async {
-        let! charDescription = getMarvelCharacter characterName
+            match character with
+            | Error e -> return $"There was an error! {e}"
+            | Ok a -> 
+                if a.Description = "" then 
+                    return "No description found :(" 
+                else 
+                    return a.Description
+        }
+
+    interface IMessageHandler with
+        member _.Handle (splitMessage:string array) = 
+            async {
+                let! charDescription = getMarvelCharacter splitMessage[1]
         
-        do! IrcCommands.privmsg charDescription
-    }
+                return charDescription
+            }
