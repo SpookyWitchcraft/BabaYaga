@@ -2,12 +2,12 @@
 
 open Modules.Environment
 open Types
+open Application.Types
 open System.Diagnostics
-open Infrastructure.ClientProxy
 
-let post (request:Auth0TokenRequest) (authUrl:string) = 
+let post (proxy:IClientProxy) (request:Auth0TokenRequest) (authUrl:string) = 
     async {
-        let! response = post request Object authUrl
+        let! response = proxy.Post request Object authUrl
 
         return response
     } 
@@ -17,14 +17,14 @@ let mutable authResponse = ({ AccessToken = ""; ExpiresIn = 86400; TokenType = "
 let buildRequest(id:string) (secret:string) (audience:string) =
   { GrantType = "client_credentials"; ClientId = id; ClientSecret = secret; Audience = audience }
 
-let getNewAuthToken () = 
+let getNewAuthToken (proxy:IClientProxy) = 
     async {
         let au = getEnvironmentVariables["AUTH_URL"]
         let cid = getEnvironmentVariables["CLIENT_ID"]
         let cs = getEnvironmentVariables["CLIENT_SECRET"]
         let aud = getEnvironmentVariables["AUDIENCE"]
 
-        let! response = post (buildRequest cid cs aud) au 
+        let! response = post proxy (buildRequest cid cs aud) au 
         return (response, Stopwatch.GetTimestamp())
     }
 
@@ -34,11 +34,11 @@ let expired (response:Auth0TokenResponse * int64) =
     let seconds = (now - b) / Stopwatch.Frequency
     a.AccessToken = "" || a.ExpiresIn <= int seconds
 
-let getToken () = 
+let getToken (proxy:IClientProxy) = 
     async {
         match authResponse with
         | ar when expired ar ->
-            let! (a, b) = getNewAuthToken()
+            let! (a, b) = getNewAuthToken proxy
 
             match a with
             | Error _ -> return a

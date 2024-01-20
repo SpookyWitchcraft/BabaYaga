@@ -1,37 +1,39 @@
 ﻿module Marvel.Service
 
 open Marvel.Types
+open Application.Types
 
-open Infrastructure.ClientProxy
+type MarvelHandler(client:IClientProxy, irc:IIrcBroadcaster) = 
 
-let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
-    async {
-        let! token = Auth0.Service.getToken ()
+    let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
+        async {
+            let! token = Auth0.Service.getToken client
 
-        match token with 
-        | Error e -> return Error(e)
-        | Ok a -> 
-            let! results = get $"/api/marvel/{characterName}" a.AccessToken
+            match token with 
+            | Error e -> return Error(e)
+            | Ok a -> 
+                let! results = client.Get $"/api/marvel/{characterName}" a.AccessToken
 
-            return results
-    } 
+                return results
+        } 
 
-let getMarvelCharacter (name:string) = 
-    async {
-        let! character = get name 
+    let getMarvelCharacter (name:string) = 
+        async {
+            let! character = get name 
 
-        match character with
-        | Error e -> return $"There was an error! {e}"
-        | Ok a -> 
-            if a.Description = "" then 
-                return "No description found :(" 
-            else 
-                return a.Description
-    }
+            match character with
+            | Error e -> return $"There was an error! {e}"
+            | Ok a -> 
+                if a.Description = "" then 
+                    return "No description found :(" 
+                else 
+                    return a.Description
+        }
 
-let handleMarvelCommand (characterName:string) = 
-    async {
-        let! charDescription = getMarvelCharacter characterName
+    interface IMessageHandler with
+        member _.Handle (inputs:string array) = 
+            async {
+                let! charDescription = getMarvelCharacter inputs[1]
         
-        do! IrcCommands.privmsg charDescription
-    }
+                do! irc.Privmsg charDescription
+            }

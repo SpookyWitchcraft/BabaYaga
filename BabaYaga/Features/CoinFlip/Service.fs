@@ -9,7 +9,7 @@ let flip () =
     | 0 -> "tails"
     | _ -> "heads"
 
-let handleFlipCommand () = 
+let handleFlipCommand (ircCommand : string -> Async<unit>) = 
     async {
-        do! IrcCommands.privmsg <| flip ()
+        do! ircCommand <| flip ()
     }
