@@ -1,7 +1,5 @@
 ﻿module Roll.Service
 
-open Application.Types
-
 open System
 
 let getDice (message:string) = 
@@ -14,7 +12,7 @@ let getDice (message:string) =
     let agg = String.Join(",", values)
     $"You rolled {agg} for a total of {sum}"
 
-let handleRollCommand (message:string) = 
+let handleRollCommand (ircCommand : string -> Async<unit>) (message:string) = 
     async {
-        do! IrcCommands.privmsg <| getDice message
+        do! ircCommand <| getDice message
     }

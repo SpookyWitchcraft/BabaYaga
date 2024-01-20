@@ -1,33 +1,31 @@
 ﻿module ChatGpt.Service
 
-open Infrastructure.ClientProxy
 open Types
+open Application.Types
 
-let get (question:string) = 
-    async {
-        let! token = Auth0.Service.getToken ()
+type ChatGptHandler(client:IClientProxy, irc:IIrcBroadcaster) = 
+    let get (question:string) = 
+        async {
+            let! token = Auth0.Service.getToken client
 
-        match token with 
-        | Error e -> return Error(e)
-        | Ok a -> 
-            let! results = proxy.Get $"/api/chatgpt/{question}" a.AccessToken
+            match token with 
+            | Error e -> return Error(e)
+            | Ok a -> 
+                let! results = client.Get $"/api/chatgpt/{question}" a.AccessToken
 
-            return results
-    } 
+                return results
+        } 
+    
+    interface IMessageHandler with
+        member _.Handle (splitMessage:string array) = 
+            async {
+                let! answer = get splitMessage[1]
 
-let getGptAnswer (question:string) = 
-    let answer = get question 
-    answer
-
-let handleGptCommand (question:string) = 
-    async {
-    let! answer = getGptAnswer question
-
-    match answer with
-    | Error e -> do! IrcCommands.privmsg $"There was an error, {e}"
-    | Ok a -> do! 
-        a.Lines 
-        |> List.map IrcCommands.privmsg
-        |> Async.Sequential
-        |> Async.Ignore
-    }
+                match answer with
+                | Error e -> do! irc.Privmsg $"There was an error, {e}"
+                | Ok a -> do! 
+                    a.Lines 
+                    |> List.map irc.Privmsg
+                    |> Async.Sequential
+                    |> Async.Ignore
+            }

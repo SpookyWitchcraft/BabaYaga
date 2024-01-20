@@ -3,12 +3,11 @@
 open Marvel.Types
 open Application.Types
 
-type MarvelHandeler(clientIn:IClientProxy) = 
-    let client = clientIn
+type MarvelHandler(client:IClientProxy, irc:IIrcBroadcaster) = 
 
     let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
         async {
-            let! token = Auth0.Service.getToken ()
+            let! token = Auth0.Service.getToken client
 
             match token with 
             | Error e -> return Error(e)
@@ -32,9 +31,9 @@ type MarvelHandeler(clientIn:IClientProxy) =
         }
 
     interface IMessageHandler with
-        member _.Handle (splitMessage:string array) = 
+        member _.Handle (inputs:string array) = 
             async {
-                let! charDescription = getMarvelCharacter splitMessage[1]
+                let! charDescription = getMarvelCharacter inputs[1]
         
-                return charDescription
+                do! irc.Privmsg charDescription
             }

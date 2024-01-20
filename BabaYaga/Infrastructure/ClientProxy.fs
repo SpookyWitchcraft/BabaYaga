@@ -7,14 +7,14 @@ open System.Text.Json
 open System.Net.Http.Headers
 open Application.Types
 
-let client = new HttpClient()
-
 let root = getEnvironmentVariables["API_URL"]
 
 let buildUrl (suffix:string) = 
     $"{root}{suffix}"
 
 type ClientProxy() = 
+    let client = new HttpClient()
+
     interface IClientProxy with
         member _.Get<'a> (urlSuffix:string) (token:string) = 
             async {
@@ -51,5 +51,3 @@ type ClientProxy() =
                     with
                         | Failure msg -> Error (msg)
             }
-
-let mutable proxy = new ClientProxy() :> IClientProxy
