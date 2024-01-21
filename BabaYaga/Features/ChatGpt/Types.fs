@@ -1,9 +1,8 @@
 ﻿module Types
 
-open System.Runtime.Serialization
+open System.Text.Json.Serialization
 
-[<DataContract>]
 type GptResponse = 
     { 
-        [<field:DataMember(Name = "lines")>]
+        [<JsonPropertyName("lines")>]
         Lines: string list }

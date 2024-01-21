@@ -1,10 +1,9 @@
 ﻿module GitHub.Types
 
-open System.Runtime.Serialization
+open System.Text.Json.Serialization
 
-[<DataContract>]
 type GitHubResponse = 
-    {[<field:DataMember(Name = "htmlUrl")>]
+    {[<JsonPropertyName("htmlUrl")>]
         HtmlUrl: string }
 
 type GitHubRequest = 
