@@ -18,10 +18,11 @@ type IIrcBroadcaster =
     abstract member Privmsg : string -> Async<unit>
     abstract member IdentifyAndJoin : string -> Async<unit>
 
+type HttpResult<'a> = Async<Result<'a, string>>
 
 type IClientProxy = 
-    abstract member Get<'a> : string -> string -> Async<Result<'a, string>>
-    abstract member Post<'a, 'b> : 'a -> AuthType -> string -> Async<Result<'b, string>>
+    abstract member Get<'a> : string -> string -> HttpResult<'a>
+    abstract member Post<'a, 'b> : 'a -> AuthType -> string -> HttpResult<'b>
 
 type IMessageHandler = 
     abstract member Handle : string array -> Async<unit>

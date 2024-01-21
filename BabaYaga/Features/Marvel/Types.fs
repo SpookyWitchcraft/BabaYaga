@@ -1,13 +1,12 @@
 ﻿module Marvel.Types
 
-open System.Runtime.Serialization
+open System.Text.Json.Serialization
 
-[<DataContract>]
 type MarvelCharacter = 
     { 
-        [<field:DataMember(Name = "id")>]
+        [<JsonPropertyName("id")>]
         Id: string
-        [<field:DataMember(Name = "name")>]
+        [<JsonPropertyName("name")>]
         Name: string
-        [<field:DataMember(Name = "description")>]
+        [<JsonPropertyName("description")>]
         Description: string }

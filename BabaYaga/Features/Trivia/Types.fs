@@ -1,18 +1,17 @@
 ﻿module Trivia.Types
 
-open System.Runtime.Serialization
+open System.Text.Json.Serialization
 open System.Collections.Generic
 
-[<DataContract>]
 type TriviaQuestion = 
     { 
-        [<field:DataMember(Name = "id")>]
-        Id: string
-        [<field:DataMember(Name = "question")>]
+        [<JsonPropertyName("id")>]
+        Id: int
+        [<JsonPropertyName("question")>]
         Question: string
-        [<field:DataMember(Name = "answer")>]
+        [<JsonPropertyName("answer")>]
         Answer: string
-        [<field:DataMember(Name = "category")>]
+        [<JsonPropertyName("category")>]
         Category: string }
 
 type QuestionStatus = 
