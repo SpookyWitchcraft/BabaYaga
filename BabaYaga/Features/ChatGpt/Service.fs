@@ -3,10 +3,10 @@
 open Types
 open Application.Types
 
-type ChatGptHandler(client:IClientProxy, irc:IIrcBroadcaster) = 
+type ChatGptHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
     let get (question:string) = 
         async {
-            let! token = Auth0.Service.getToken client
+            let! token = auth.GetToken ()
 
             match token with 
             | Error e -> return Error(e)

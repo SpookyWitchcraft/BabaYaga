@@ -9,13 +9,13 @@
     <None Include=".env">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Compile Include="Infrastructure\Auth0\Types.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Modules\ConsoleWriter.fs" />
     <Compile Include="Modules\Environment.fs" />
     <Compile Include="Modules\TcpClientProxy.fs" />
     <Compile Include="Modules\IrcCommands.fs" />
     <Compile Include="Infrastructure\ClientProxy.fs" />
-    <Compile Include="Infrastructure\Auth0\Types.fs" />
     <Compile Include="Infrastructure\Auth0\Service.fs" />
     <Compile Include="Features\Marvel\Types.fs" />
     <Compile Include="Features\Marvel\Service.fs" />

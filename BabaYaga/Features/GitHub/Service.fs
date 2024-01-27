@@ -5,10 +5,10 @@ open Types
 open Infrastructure.ClientProxy
 open System
 
-type GitHubHandler(client:IClientProxy, irc:IIrcBroadcaster) = 
+type GitHubHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
     let post (issue:GitHubRequest) = 
         async {
-            let! token = Auth0.Service.getToken client
+            let! token = auth.GetToken ()
 
             match token with
             | Error e -> return Error(e)

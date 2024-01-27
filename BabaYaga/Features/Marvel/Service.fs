@@ -3,11 +3,11 @@
 open Marvel.Types
 open Application.Types
 
-type MarvelHandler(client:IClientProxy, irc:IIrcBroadcaster) = 
+type MarvelHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
 
     let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
         async {
-            let! token = Auth0.Service.getToken client
+            let! token = auth.GetToken ()
 
             match token with 
             | Error e -> return Error(e)

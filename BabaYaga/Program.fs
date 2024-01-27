@@ -7,19 +7,21 @@ open Marvel.Service
 open ChatGpt.Service
 open GitHub.Service
 open Trivia.Service
+open Auth0.Service
 
 let mutable botState = Unidentified
 
 let tcp = TcpProxy() :> ITcpProxy
 let http = ClientProxy()
 let irc = IrcBroadcaster(tcp) :> IIrcBroadcaster
-let triviaHandler = TriviaHandler(http, irc)
+let auth = Auth0Service(http) :> IAuth0Service
+let triviaHandler = TriviaHandler(http, auth, irc)
 
 let createDictionary http irc = 
-    dict[
-        "marvel", MarvelHandler(http, irc) :> IMessageHandler
-        "chatgpt", ChatGptHandler(http, irc) :> IMessageHandler
-        "git", GitHubHandler(http, irc) :> IMessageHandler
+    dict [
+        "marvel", MarvelHandler(http, auth, irc) :> IMessageHandler
+        "chatgpt", ChatGptHandler(http, auth, irc) :> IMessageHandler
+        "git", GitHubHandler(http, auth, irc) :> IMessageHandler
         "trivia", triviaHandler :> IMessageHandler
         ]
 
