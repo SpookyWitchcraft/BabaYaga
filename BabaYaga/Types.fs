@@ -2,6 +2,7 @@
 
 open System.IO
 open System.Collections.Generic
+open Auth0.Types
 
 type AuthType = 
     | Object
@@ -24,6 +25,9 @@ type IClientProxy =
     abstract member Get<'a> : string -> string -> HttpResult<'a>
     abstract member Post<'a, 'b> : 'a -> AuthType -> string -> HttpResult<'b>
 
+type IAuth0Service = 
+    abstract member GetToken : unit -> Async<Result<Auth0TokenResponse, string>>
+
 type IMessageHandler = 
     abstract member Handle : string array -> Async<unit>
 
@@ -36,5 +40,3 @@ type Application =
     { TcpProxy : ITcpProxy; 
     Irc : IIrcBroadcaster;
     Handlers : IDictionary<string, IMessageHandler> }
-
-//test

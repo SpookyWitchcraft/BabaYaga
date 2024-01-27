@@ -11,7 +11,7 @@ open System.Threading
 
 
 
-type TriviaHandler(client:IClientProxy, irc:IIrcBroadcaster) = 
+type TriviaHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
     let initialState = 
         { 
             questionStatus = Disabled
@@ -24,7 +24,7 @@ type TriviaHandler(client:IClientProxy, irc:IIrcBroadcaster) =
 
     let get () = 
         async {
-            let! token = Auth0.Service.getToken client
+            let! token = auth.GetToken ()
 
             match token with
             | Error e -> return Error (e)
