@@ -9,6 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Mocks\TcpProxyMocks.fs" />
+    <Compile Include="Mocks\ClientProxyMocks.fs" />
+    <Compile Include="MarvelTests.fs" />
     <Compile Include="CoinFlipTests.fs" />
     <Compile Include="RollTests.fs" />
     <Compile Include="Tests.fs" />
