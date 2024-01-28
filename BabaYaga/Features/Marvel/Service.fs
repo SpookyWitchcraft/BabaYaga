@@ -34,6 +34,6 @@ type MarvelHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster)
         member _.Handle (inputs:string array) = 
             async {
                 let! charDescription = getMarvelCharacter inputs[1]
-        
-                do! irc.Privmsg charDescription
+
+                return Some charDescription
             }
