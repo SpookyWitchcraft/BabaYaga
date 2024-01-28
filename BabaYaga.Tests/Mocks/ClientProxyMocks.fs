@@ -19,14 +19,14 @@ type ClientProxySuccessMock(js:string) =
                 return Ok(obj)
             }
 
-type ClientProxyFailureMock(js:string) = 
+type ClientProxyFailureMock(error:string) = 
     interface IClientProxy with
         member _.Get<'a> (urlSuffix:string) (token:string) : Async<Result<'a, string>> = 
             async {
-                return Error js
+                return Error error
             }
 
         member _.Post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) : Async<Result<'b, string>> = 
             async {
-                return Error js
+                return Error error
             }
