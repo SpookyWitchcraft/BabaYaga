@@ -29,7 +29,7 @@ type IAuth0Service =
     abstract member GetToken : unit -> Async<Result<Auth0TokenResponse, string>>
 
 type IMessageHandler = 
-    abstract member Handle : string array -> Async<string option>
+    abstract member Handle : string array -> Async<unit>
 
 type BotState = Unidentified | Identified
 

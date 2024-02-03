@@ -1,39 +1,30 @@
 ﻿module Marvel.Service
 
-open Marvel.Types
 open Application.Types
+open Types
 
-type MarvelHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
-
-    let get (characterName:string) : Async<Result<MarvelCharacter, string>> = 
+type MarvelService(client:IClientProxy, auth:IAuth0Service) = 
+    member _.GetMarvelCharacter (name:string) : Async<Result<MarvelCharacter, string>> = 
         async {
             let! token = auth.GetToken ()
 
             match token with 
             | Error e -> return Error(e)
             | Ok a -> 
-                let! results = client.Get $"/api/marvel/{characterName}" a.AccessToken
+                let! results = client.Get $"/api/marvel/{name}" a.AccessToken
 
                 return results
-        } 
-
-    let getMarvelCharacter (name:string) = 
-        async {
-            let! character = get name 
-
-            match character with
-            | Error e -> return $"There was an error! {e}"
-            | Ok a -> 
-                if a.Description = "" then 
-                    return "No description found :(" 
-                else 
-                    return a.Description
         }
+
+type MarvelHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
+    let service = MarvelService(client, auth)
 
     interface IMessageHandler with
         member _.Handle (inputs:string array) = 
             async {
-                let! charDescription = getMarvelCharacter inputs[1]
+                let! results = service.GetMarvelCharacter inputs[1]
 
-                return Some charDescription
+                match results with
+                | Error e -> do! irc.Privmsg e
+                | Ok a -> do! irc.Privmsg a.Description
             }

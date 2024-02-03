@@ -7,7 +7,6 @@ open IrcCommands
 open TcpProxyMocks
 open ClientProxyMocks
 open Auth0.Service
-open Application.Types
 open Marvel.Types
 
 let hero = {Id = "1"; Name = "Juggernaut"; Description = "Big"}
@@ -20,9 +19,10 @@ let irc = IrcBroadcaster(tcp)
 [<Fact>]
 let ``get should return superhero data`` () =
     let auth = Auth0Service(httpSuccess)
-    let handler = MarvelHandler(httpSuccess, auth, irc) :> IMessageHandler
+    let service = MarvelService(httpSuccess, auth)
+    let defaultHero = {Id = "0"; Name = "NoOne"; Description = "Burger"}
 
-    let option = handler.Handle [|"m1"; "m2"|] |> Async.RunSynchronously
-    let result = option.Value = "Big"
+    let result = service.GetMarvelCharacter "Juggernaut" |> Async.RunSynchronously
 
-    Assert.True(result)
+    Assert.True(Result.isOk result)
+    Assert.True((Result.defaultValue defaultHero result).Description = "Big")
