@@ -16,9 +16,8 @@ type MarvelService(client:IClientProxy, auth:IAuth0Service) =
                 return results
         }
 
-type MarvelHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
-    let service = MarvelService(client, auth)
-
+type MarvelHandler(service:MarvelService, irc:IIrcBroadcaster) = 
+    
     interface IMessageHandler with
         member _.Handle (inputs:string array) = 
             async {

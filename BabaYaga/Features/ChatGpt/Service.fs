@@ -17,8 +17,7 @@ type ChatGptService(client:IClientProxy, auth:IAuth0Service) =
         } 
 
 
-type ChatGptHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
-    let service = ChatGptService(client, auth)
+type ChatGptHandler(service:ChatGptService, irc:IIrcBroadcaster) = 
     
     interface IMessageHandler with
         member _.Handle (splitMessage:string array) = 

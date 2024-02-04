@@ -15,13 +15,18 @@ let tcp = TcpProxy() :> ITcpProxy
 let http = ClientProxy()
 let irc = IrcBroadcaster(tcp) :> IIrcBroadcaster
 let auth = Auth0Service(http) :> IAuth0Service
-let triviaHandler = TriviaHandler(http, auth, irc)
+let triviaService = TriviaService(http, auth)
+let triviaHandler = TriviaHandler(triviaService, irc)
 
 let createDictionary http irc = 
+    let marvelService = MarvelService(http, auth)
+    let chatGptService = ChatGptService(http, auth)
+    let gitHubService = GitHubService(http, auth)
+
     dict [
-        "marvel", MarvelHandler(http, auth, irc) :> IMessageHandler
-        "chatgpt", ChatGptHandler(http, auth, irc) :> IMessageHandler
-        "git", GitHubHandler(http, auth, irc) :> IMessageHandler
+        "marvel", MarvelHandler(marvelService, irc) :> IMessageHandler
+        "chatgpt", ChatGptHandler(chatGptService, irc) :> IMessageHandler
+        "git", GitHubHandler(gitHubService, irc) :> IMessageHandler
         "trivia", triviaHandler :> IMessageHandler
         ]
 
