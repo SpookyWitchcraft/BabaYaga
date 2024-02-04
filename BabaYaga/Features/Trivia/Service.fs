@@ -23,8 +23,7 @@ type TriviaService(client:IClientProxy, auth:IAuth0Service) =
                 return results
         } 
 
-type TriviaHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
-    let service = TriviaService(client, auth)
+type TriviaHandler(service:TriviaService, irc:IIrcBroadcaster) = 
 
     let initialState = 
         { 

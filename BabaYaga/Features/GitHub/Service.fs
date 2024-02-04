@@ -26,8 +26,7 @@ type GitHubService(client:IClientProxy, auth:IAuth0Service) =
 
         { Title = title; Body = $"{user}: {input[1]}"; Labels = [| "bug" |] }
 
-type GitHubHandler(client:IClientProxy, auth:IAuth0Service, irc:IIrcBroadcaster) = 
-    let service = GitHubService(client, auth)
+type GitHubHandler(service:GitHubService, irc:IIrcBroadcaster) = 
     
     interface IMessageHandler with
         member _.Handle (inputs:string array) = 
