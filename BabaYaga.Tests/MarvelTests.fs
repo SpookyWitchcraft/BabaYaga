@@ -26,3 +26,15 @@ let ``get should return superhero data`` () =
 
     Assert.True(Result.isOk result)
     Assert.True((Result.defaultValue defaultHero result).Description = "Big")
+
+[<Fact>]
+let ``get should fail with an error message`` () =
+    let auth = Auth0Service(httpSuccess)
+    let service = MarvelService(httpFailure, auth)
+
+    let result = service.GetMarvelCharacter "Juggernaut" |> Async.RunSynchronously
+
+    let e = match result with | Ok _ -> "incorrect" | Error e -> e
+
+    Assert.True(Result.isError result)
+    Assert.True((e = "No Good!"))

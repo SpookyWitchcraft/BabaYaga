@@ -11,6 +11,9 @@
   <ItemGroup>
     <Compile Include="Mocks\TcpProxyMocks.fs" />
     <Compile Include="Mocks\ClientProxyMocks.fs" />
+    <Compile Include="GitHubTests.fs" />
+    <Compile Include="TriviaTests.fs" />
+    <Compile Include="ChatGptTests.fs" />
     <Compile Include="MarvelTests.fs" />
     <Compile Include="CoinFlipTests.fs" />
     <Compile Include="RollTests.fs" />
