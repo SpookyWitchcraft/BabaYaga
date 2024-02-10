@@ -1,0 +1,23 @@
+#slimer
+
+name: Build & Test
+
+on:
+  pull_request:
+    types: [ closed, opened ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+    - name: Install dependencies
+      run: dotnet restore BabaYaga/BabaYaga.sln
+    - name: Build
+      run: dotnet build BabaYaga/BabaYaga.sln
+    - name: Test with the dotnet CLI
+      run: dotnet test BabaYaga/BabaYaga.sln
