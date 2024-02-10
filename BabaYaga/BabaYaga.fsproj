@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <None Include=".env">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
     <Compile Include="Infrastructure\Auth0\Types.fs" />
     <Compile Include="Types.fs" />
