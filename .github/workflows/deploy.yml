@@ -16,8 +16,8 @@ jobs:
       with:
         dotnet-version: '8.0.x'
     - name: Install dependencies
-      run: dotnet restore BabaYaga.sln
+      run: dotnet restore BabaYaga/BabaYaga.sln
     - name: Build
-      run: dotnet build BabaYaga.sln
+      run: dotnet build BabaYaga/BabaYaga.sln
     - name: Test with the dotnet CLI
-      run: dotnet test BabaYaga.sln
+      run: dotnet test BabaYaga/BabaYaga.sln
