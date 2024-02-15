@@ -22,6 +22,7 @@ type IIrcBroadcaster =
 type HttpResult<'a> = Async<Result<'a, string>>
 
 type IClientProxy = 
+    abstract member BuildUrl : string -> string
     abstract member Get<'a> : string -> string -> HttpResult<'a>
     abstract member Post<'a, 'b> : 'a -> AuthType -> string -> HttpResult<'b>
 
@@ -30,6 +31,9 @@ type IAuth0Service =
 
 type IMessageHandler = 
     abstract member Handle : string array -> Async<unit>
+
+type IEnvironment = 
+    abstract member GetSecrets : IDictionary<string, string>
 
 type BotState = Unidentified | Identified
 

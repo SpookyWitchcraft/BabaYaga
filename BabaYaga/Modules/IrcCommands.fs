@@ -1,7 +1,6 @@
 ﻿module IrcCommands
 
 open Modules.ConsoleWriter
-open Modules.Environment
 open Modules
 open Application.Types
 
@@ -18,12 +17,12 @@ let getMessageInfo (line:string) =
         | _ -> 
             Some({ UserInfo = split[1]; Channel = messageDetails[1]; Message = split[2]})
 
-type IrcBroadcaster (tcp:ITcpProxy) = 
-    let server = getEnvironmentVariables["SERVER"]
-    let port  = int (getEnvironmentVariables["PORT"])
-    let channel = getEnvironmentVariables["CHANNEL"]
-    let nick = getEnvironmentVariables["NICK"]
-    let password = getEnvironmentVariables["PASSWORD"]
+type IrcBroadcaster (environment:IEnvironment, tcp:ITcpProxy) = 
+    let server = environment.GetSecrets["by-server"]
+    let port  = int (environment.GetSecrets["by-port"])
+    let channel = environment.GetSecrets["by-channel"]
+    let nick = environment.GetSecrets["by-nick"]
+    let password = environment.GetSecrets["by-password"]
     
     let identify line = 
         async {

@@ -1,21 +1,23 @@
 ﻿module Infrastructure.ClientProxy
 
 open System.Net.Http
-open Modules.Environment
 open System.Text
 open System.Text.Json
 open System.Net.Http.Headers
 open Application.Types
 
-let root = getEnvironmentVariables["API_URL"]
-
-let buildUrl (suffix:string) = 
-    $"{root}{suffix}"
-
-type ClientProxy() = 
+type ClientProxy(environment:IEnvironment) = 
     let client = new HttpClient()
 
+    let root = environment.GetSecrets["by-api-url"]
+
+    let buildUrl (suffix:string) = 
+        $"{root}{suffix}"
+
     interface IClientProxy with
+        member _.BuildUrl (suffix:string) = 
+            buildUrl suffix
+
         member _.Get<'a> (urlSuffix:string) (token:string) = 
             async {
                 client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", token)

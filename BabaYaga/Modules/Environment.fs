@@ -1,28 +1,50 @@
 ﻿module Modules.Environment
 
-let testDict = 
-    dict [
-        "AUTH_URL", "http://auth.com"
-        "CLIENT_ID", "123"
-        "CLIENT_SECRET", "123"
-        "AUDIENCE", "123"
-        "API_URL", "http://apiurl.com"
-        "SERVER", "123"
-        "PORT", "123"
-        "CHANNEL", "#123"
-        "NICK", "123"
-        "PASSWORD", "123"
-    ]
+open Azure.Security.KeyVault.Secrets;
+open System
+open Azure.Core
+open Azure.Identity
+open Application.Types
 
-let getEnvironmentVariables = 
-    if not <| System.IO.File.Exists(".env") then
-        testDict
-    else
-        let text = System.IO.File.ReadAllLines(".env")
-        text
-        |> Seq.map (fun x -> x.Split('='))
-        |> Seq.map (fun y -> y[0], y[1])
-        |> dict
+let options = 
+    let options = SecretClientOptions()
+    options.Retry.Delay <- TimeSpan.FromSeconds(2)
+    options.Retry.MaxDelay <- TimeSpan.FromSeconds(16)
+    options.Retry.MaxRetries <- 5
+    options.Retry.Mode <- RetryMode.Exponential
+    options
+
+let client = 
+    SecretClient(new Uri("https://spookywitchcraft-vault.vault.azure.net/"), new DefaultAzureCredential(), options)
+
+let getValue key = 
+    let response = client.GetSecret key
+    let kvs = response.Value
+    kvs.Value
+
+type Environment() = 
+    interface IEnvironment with
+        member _.GetSecrets = 
+            #if DEBUG
+                let text = System.IO.File.ReadAllLines(".env")
+                text
+                |> Seq.map (fun x -> x.Split('='))
+                |> Seq.map (fun y -> y[0], y[1])
+                |> dict
+            #else
+                dict [
+                "by-auth-url", getValue "by-auth-url"
+                "by-client-id", getValue "by-client-id"
+                "by-client-secret", getValue "by-client-secret"
+                "by-audience", getValue "by-audience"
+                "by-api-url", getValue "by-api-url"
+                "by-server", getValue "by-server"
+                "by-port", getValue "by-port"
+                "by-channel", getValue "by-channel"
+                "by-nick", getValue "by-nick"
+                "by-password", getValue "by-password"
+            ]
+            #endif
 
 let (=?) left right = 
     System.String.Equals(left, right, System.StringComparison.CurrentCultureIgnoreCase)

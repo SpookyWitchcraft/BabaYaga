@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Mocks\EnvironmentMock.fs" />
     <Compile Include="Mocks\TcpProxyMocks.fs" />
     <Compile Include="Mocks\ClientProxyMocks.fs" />
     <Compile Include="GitHubTests.fs" />

@@ -2,7 +2,6 @@
 
 open Application.Types
 open Types
-open Infrastructure.ClientProxy
 open System
 
 type GitHubService(client:IClientProxy, auth:IAuth0Service) = 
@@ -13,7 +12,7 @@ type GitHubService(client:IClientProxy, auth:IAuth0Service) =
             match token with
             | Error e -> return Error(e)
             | Ok a -> 
-                let! results = client.Post issue (Token a.AccessToken) (buildUrl $"/api/github")
+                let! results = client.Post issue (Token a.AccessToken) (client.BuildUrl $"/api/github")
         
                 return results
         } 
