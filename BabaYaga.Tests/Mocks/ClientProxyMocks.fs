@@ -5,6 +5,7 @@ open System.Text.Json
 
 type ClientProxySuccessMock(js:string) = 
     interface IClientProxy with
+        member _.BuildUrl (suffix:string) = suffix
         member _.Get<'a> (urlSuffix:string) (token:string) = 
             async {
                 let obj = JsonSerializer.Deserialize<'a>(js)
@@ -21,6 +22,7 @@ type ClientProxySuccessMock(js:string) =
 
 type ClientProxyFailureMock(error:string) = 
     interface IClientProxy with
+        member _.BuildUrl (suffix:string) = suffix
         member _.Get<'a> (urlSuffix:string) (token:string) : Async<Result<'a, string>> = 
             async {
                 return Error error

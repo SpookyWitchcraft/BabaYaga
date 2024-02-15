@@ -1,13 +1,12 @@
 ﻿module Auth0.Service
 
-open Modules.Environment
 open Types
 open Application.Types
 open System.Diagnostics
 
 
 
-type Auth0Service(client:IClientProxy) = 
+type Auth0Service(environment:IEnvironment, client:IClientProxy) = 
     let post (request:Auth0TokenRequest) (authUrl:string) = 
         async {
             let! response = client.Post request Object authUrl
@@ -22,10 +21,10 @@ type Auth0Service(client:IClientProxy) =
 
     let getNewAuthToken () = 
         async {
-            let au = getEnvironmentVariables["AUTH_URL"]
-            let cid = getEnvironmentVariables["CLIENT_ID"]
-            let cs = getEnvironmentVariables["CLIENT_SECRET"]
-            let aud = getEnvironmentVariables["AUDIENCE"]
+            let au = environment.GetSecrets["by-auth-url"]
+            let cid = environment.GetSecrets["by-client-id"]
+            let cs = environment.GetSecrets["by-client-secret"]
+            let aud = environment.GetSecrets["by-audience"]
 
             let! response = post (buildRequest cid cs aud) au 
 

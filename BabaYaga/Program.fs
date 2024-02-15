@@ -8,13 +8,15 @@ open ChatGpt.Service
 open GitHub.Service
 open Trivia.Service
 open Auth0.Service
+open Modules.Environment
 
 let mutable botState = Unidentified
 
-let tcp = TcpProxy() :> ITcpProxy
-let http = ClientProxy()
-let irc = IrcBroadcaster(tcp) :> IIrcBroadcaster
-let auth = Auth0Service(http) :> IAuth0Service
+let env = Environment() :> IEnvironment
+let tcp = TcpProxy(env) :> ITcpProxy
+let http = ClientProxy(env)
+let irc = IrcBroadcaster(env, tcp) :> IIrcBroadcaster
+let auth = Auth0Service(env, http) :> IAuth0Service
 let triviaService = TriviaService(http, auth)
 let triviaHandler = TriviaHandler(triviaService, irc)
 

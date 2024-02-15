@@ -8,17 +8,19 @@ open TcpProxyMocks
 open ClientProxyMocks
 open Auth0.Service
 open Trivia.Types
+open EnvironmentMock
 
 let tq = { Id = 1; Question = "Yes?"; Answer = "No."; Category = "General" }
 let js = JsonSerializer.Serialize(tq)
+let env = EnvironmentMock()
 let httpSuccess = ClientProxySuccessMock(js)
 let httpFailure = ClientProxyFailureMock("No Good!")
 let tcp = TcpProxyMock()
-let irc = IrcBroadcaster(tcp)
+let irc = IrcBroadcaster(env, tcp)
 
 [<Fact>]
 let ``get should return superhero data`` () =
-    let auth = Auth0Service(httpSuccess)
+    let auth = Auth0Service(env, httpSuccess)
     let service = TriviaService(httpSuccess, auth)
     let defaultTq = { Id = 0; Question = ""; Answer = ""; Category = "" }
 
@@ -32,7 +34,7 @@ let ``get should return superhero data`` () =
 
 [<Fact>]
 let ``get should fail with an error message`` () =
-    let auth = Auth0Service(httpSuccess)
+    let auth = Auth0Service(env, httpSuccess)
     let service = TriviaService(httpFailure, auth)
 
     let result = service.Get () |> Async.RunSynchronously

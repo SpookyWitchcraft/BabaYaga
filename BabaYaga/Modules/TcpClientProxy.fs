@@ -1,14 +1,12 @@
 ﻿module TcpClientProxy
 
-open Modules.Environment
-
 open System.Net.Sockets
 open System.IO
 open Application.Types
 
-type TcpProxy() = 
-    let server = getEnvironmentVariables["SERVER"]
-    let port  = int (getEnvironmentVariables["PORT"])
+type TcpProxy(environment:IEnvironment) = 
+    let server = environment.GetSecrets["by-server"]
+    let port  = int (environment.GetSecrets["by-port"])
 
     let client = new TcpClient();
     do client.Connect(server, port)
