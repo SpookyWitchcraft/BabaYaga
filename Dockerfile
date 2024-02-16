@@ -16,12 +16,12 @@ RUN dotnet restore "BabaYaga/BabaYaga.fsproj"
 
 WORKDIR $HOME/src
 COPY . .
-RUN dotnet build "BabaYaga.fsproj" -c Release -o /app
+RUN dotnet build "BabaYaga/BabaYaga.fsproj" -c Release -o /app
 
 FROM build AS publish
 ARG by-vault
 ENV by-vault=by-vault
-RUN dotnet publish "BabaYaga.fsproj" -c Release -o /app
+RUN dotnet publish "BabaYaga/BabaYaga.fsproj" -c Release -o /app
 
 FROM base AS final
 ARG by-vault
