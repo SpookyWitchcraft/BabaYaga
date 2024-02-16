@@ -15,7 +15,7 @@ let options =
     options
 
 let client = 
-    SecretClient(new Uri("https://spookywitchcraft-vault.vault.azure.net/"), new DefaultAzureCredential(), options)
+    SecretClient(new Uri(Environment.GetEnvironmentVariable("by-vault")), new DefaultAzureCredential(), options)
 
 let getValue key = 
     let response = client.GetSecret key
