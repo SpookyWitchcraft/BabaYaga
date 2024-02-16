@@ -39,4 +39,8 @@
     <ProjectReference Include="..\BabaYaga\BabaYaga.fsproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
 </Project>

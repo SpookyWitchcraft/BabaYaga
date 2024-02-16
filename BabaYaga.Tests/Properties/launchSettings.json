@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "BabaYaga.Tests": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "by-vault": "https://spookywitchcraft-vault.vault.azure.net/"
+      }
+    }
+  }
+}
