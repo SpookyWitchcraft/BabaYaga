@@ -9,7 +9,7 @@ ARG by-vault
 ENV by-vault=by-vault
 WORKDIR /src
 
-COPY ["BabaYaga.fsproj", "BabaYaga/"]
+COPY ["BabaYaga/BabaYaga.fsproj", "BabaYaga/"]
 COPY ["nuget.config", ""]
 
 RUN dotnet restore "BabaYaga/BabaYaga.fsproj"
