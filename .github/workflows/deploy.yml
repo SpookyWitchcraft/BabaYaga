@@ -3,7 +3,7 @@
 name: Build and deploy to ACR
 
 env:
-  PROJECT_NAME: babaYaga                            # set this to your project's name
+  PROJECT_NAME: babayaga                            # set this to your project's name
   RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}                   # set this to the resource group containing your AKS cluster
   REGISTRY_URL: ${{ secrets.REGISTRY_LOGIN_SERVER }}              # set this to the URL of your registry
 
