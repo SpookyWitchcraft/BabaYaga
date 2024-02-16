@@ -15,7 +15,7 @@ let options =
     options
 
 let client = 
-    SecretClient(new Uri(Environment.GetEnvironmentVariable("by-vault")), new DefaultAzureCredential(), options)
+    SecretClient(new Uri("https://" + Environment.GetEnvironmentVariable("by-vault")), new DefaultAzureCredential(), options)
 
 let getValue key = 
     let response = client.GetSecret key
