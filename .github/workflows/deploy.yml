@@ -35,8 +35,6 @@ jobs:
 
     - uses: azure/docker-login@v1
       with:
-        context: BabaYaga/
-        file: ./BabaYaga/Dockerfile
         build-args: |
             "by-vault=${{ secrets.BYVAULT }}"
         login-server: ${{ env.REGISTRY_URL }}
