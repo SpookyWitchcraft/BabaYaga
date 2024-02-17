@@ -399,3 +399,4 @@ FodyWeavers.xsd
 
 # visual studio
 .env
+launchSettings.json
