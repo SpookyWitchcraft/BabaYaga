@@ -41,6 +41,7 @@ jobs:
       with:
         appSourcePath: ${{ github.workspace }}
         acrName: ${{ env.REGISTRY_URL }}
+        containerAppEnvironment: babayaga-env
         # acrUsername: ${{ secrets.REGISTRY_USERNAME }}
         # acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
         containerAppName: ${{ env.PROJECT_NAME }}
