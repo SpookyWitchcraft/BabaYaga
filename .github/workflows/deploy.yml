@@ -47,4 +47,4 @@ jobs:
         resourceGroup: ${{ env.RESOURCE_GROUP }}
         # imageToBuild: ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
         # dockerfilePath: Dockerfile
-        buildArguments: by-vault=${{ secrets.BYVAULT }}
+        #buildArguments: by-vault=${{ secrets.BYVAULT }}
