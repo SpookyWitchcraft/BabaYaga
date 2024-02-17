@@ -14,7 +14,7 @@ let options =
     options.Retry.Mode <- RetryMode.Exponential
     options
 
-let vault = Environment.GetEnvironmentVariable("by-vault")
+let vault = Environment.GetEnvironmentVariable("BY_VAULT")
 
 let url = $"https://{vault}"
 
