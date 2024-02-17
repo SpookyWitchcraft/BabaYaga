@@ -33,19 +33,18 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: azure/docker-login@v1
+    - uses: azure/login@v1
       with:
-        build-args: by-vault=${{ secrets.BYVAULT }}
-        login-server: ${{ env.REGISTRY_URL }}
-        username: ${{ secrets.REGISTRY_USERNAME }}
-        password: ${{ secrets.REGISTRY_PASSWORD }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - run: |
-        docker build -t ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }} .
-        docker push ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}   
-
-    - uses: azure/webapps-deploy@v2
+    - uses: azure/container-apps-deploy-action@v1
       with:
-        app-name: '${{ env.PROJECT_NAME }}'
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        images: ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+        appSourcePath: ${{ github.workspace }}
+        registryUrl: ${{ env.REGISTRY_URL }}
+        acrUsername: ${{ secrets.REGISTRY_USERNAME }}
+        acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
+        containerAppName: babayaga
+        resourceGroup: ${{ secrets.RESOURCE_GROUP }}
+        imageToBuild: ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+        dockerfilePath: Dockerfile
+        buildArguments: by-vault=${{ secrets.BYVAULT }}
