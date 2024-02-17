@@ -40,11 +40,11 @@ jobs:
     - uses: azure/container-apps-deploy-action@v1
       with:
         appSourcePath: ${{ github.workspace }}
-        registryUrl: ${{ env.REGISTRY_URL }}
-        acrUsername: ${{ secrets.REGISTRY_USERNAME }}
-        acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
+        acrName: ${{ env.REGISTRY_URL }}
+        # acrUsername: ${{ secrets.REGISTRY_USERNAME }}
+        # acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
         containerAppName: ${{ env.PROJECT_NAME }}
         resourceGroup: ${{ env.RESOURCE_GROUP }}
-        imageToBuild: ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
-        dockerfilePath: Dockerfile
+        # imageToBuild: ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+        # dockerfilePath: Dockerfile
         buildArguments: by-vault=${{ secrets.BYVAULT }}
