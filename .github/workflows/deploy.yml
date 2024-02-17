@@ -43,8 +43,8 @@ jobs:
         registryUrl: ${{ env.REGISTRY_URL }}
         acrUsername: ${{ secrets.REGISTRY_USERNAME }}
         acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
-        containerAppName: babayaga
-        resourceGroup: ${{ secrets.RESOURCE_GROUP }}
+        containerAppName: ${{ env.PROJECT_NAME }}
+        resourceGroup: ${{ env.RESOURCE_GROUP }}
         imageToBuild: ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
         dockerfilePath: Dockerfile
         buildArguments: by-vault=${{ secrets.BYVAULT }}
