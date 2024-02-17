@@ -14,8 +14,12 @@ let options =
     options.Retry.Mode <- RetryMode.Exponential
     options
 
+let vault = Environment.GetEnvironmentVariable("by-vault")
+
+let url = $"https://{vault}"
+
 let client = 
-    SecretClient(new Uri("https://" + Environment.GetEnvironmentVariable("by-vault")), new DefaultAzureCredential(), options)
+    SecretClient(new Uri(url), new DefaultAzureCredential(), options)
 
 let getValue key = 
     let response = client.GetSecret key
