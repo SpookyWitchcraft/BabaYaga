@@ -1,14 +1,20 @@
 ﻿module Infrastructure.ClientProxy
 
+open System
 open System.Net.Http
 open System.Text
 open System.Text.Json
 open System.Net.Http.Headers
 open Application.Types
 
-type ClientProxy(environment:IEnvironment) = 
+let createHttpClient =
     let client = new HttpClient()
+    client.Timeout <- TimeSpan.FromMinutes 5
+    client
 
+type ClientProxy(environment:IEnvironment) = 
+    let client = createHttpClient
+    
     let root = environment.GetSecrets["by-api-url"]
 
     let buildUrl (suffix:string) = 
@@ -30,7 +36,7 @@ type ClientProxy(environment:IEnvironment) =
                     try
                         Ok(JsonSerializer.Deserialize<'a>(results))
                     with
-                        | Failure msg -> Error (msg)
+                        | Failure msg -> Error msg
             } 
 
         member _.Post<'a, 'b> (obj: 'a) (auth:AuthType) (url:string) = 
@@ -51,5 +57,5 @@ type ClientProxy(environment:IEnvironment) =
                     try
                         Ok(JsonSerializer.Deserialize<'b>(results))
                     with
-                        | Failure msg -> Error (msg)
+                        | Failure msg -> Error msg
             }
