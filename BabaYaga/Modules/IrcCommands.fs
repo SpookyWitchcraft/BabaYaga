@@ -27,15 +27,15 @@ type IrcBroadcaster (environment:IEnvironment, tcp:ITcpProxy) =
     let identify line = 
         async {
             let output = sprintf "nickserv identify %s\r\n" password
-            ConsoleWriter.writeText <| Input line
+            writeText <| Input line
             do! tcp.WriteAsync(output) 
         }
 
     let joinChannel line = 
         async {
             let output = sprintf "JOIN %s" channel
-            ConsoleWriter.writeText <| Input line
-            ConsoleWriter.writeText <| Output output
+            writeText <| Input line
+            writeText <| Output output
             do! tcp.WriteAsync(output + "\r\n") 
         }
 
@@ -52,14 +52,14 @@ type IrcBroadcaster (environment:IEnvironment, tcp:ITcpProxy) =
                 let output = sprintf "PONG :%s %s" cookie server
                 do! tcp.WriteAsync(output + "\r\n") 
 
-                ConsoleWriter.writeInputAndOutput (Input line) (Output output)
+                writeInputAndOutput (Input line) (Output output)
             }
 
         member _.Privmsg message = 
             async {
                 do! tcp.WriteAsync(sprintf "PRIVMSG %s %s\r\n" channel message)
 
-                ConsoleWriter.writeText <| Output message
+                writeText <| Output message
             }
 
         member _.IdentifyAndJoin line = 
