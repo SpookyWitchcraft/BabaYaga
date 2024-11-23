@@ -26,7 +26,7 @@ type IrcBroadcaster (environment:IEnvironment, tcp:ITcpProxy) =
     
     let identify line = 
         async {
-            let output = sprintf "nickserv identify %s\r\n" password
+            let output = $"nickserv identify %s{password}\r\n"
             writeText <| Input line
             do! tcp.WriteAsync(output) 
         }
