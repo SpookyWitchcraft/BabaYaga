@@ -397,6 +397,24 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+# Default ignored files
+/shelf/
+workspace.xml
+# Rider ignored files
+contentModel.xml
+projectSettingsUpdater.xml
+modules.xml
+encodings.xml
+indexLayout.xml
+vcs.xml
+.idea.BabaYaga.iml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+
 # visual studio
 .env
 launchSettings.json
