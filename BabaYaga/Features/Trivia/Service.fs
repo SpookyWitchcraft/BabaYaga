@@ -144,7 +144,7 @@ type TriviaHandler(service:TriviaService, irc:IIrcBroadcaster) =
         async {
             match state.questionStatus with
             | NewQuestion -> 
-                let! (question, time) = getTriviaQuestion()
+                let! question, time = getTriviaQuestion()
                 ignore <| timer.Change(500, 500)
                 state <- { state with questionStatus = question; timestamp = time }
                 do! irc.Privmsg <| questionOutput question
