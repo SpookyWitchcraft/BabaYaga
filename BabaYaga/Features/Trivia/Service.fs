@@ -16,7 +16,7 @@ type TriviaService(client:IClientProxy, auth:IAuth0Service) =
             let! token = auth.GetToken ()
 
             match token with
-            | Error e -> return Error (e)
+            | Error e -> return Error e
             | Ok a ->
                 let! results = client.Get "/api/trivia" a.AccessToken
 
